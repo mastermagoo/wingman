@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # Wingman runs in isolated container with restricted access
+  wingman:
+    build: ./wingman
+    container_name: wingman-verifier
+    networks:
+      - wingman-net  # Separate network
+    volumes:
+      # Read-only access to verify claims
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - intel-data:/intel-data:ro
+      - ./logs:/verification-logs
+    environment:
+      - WINGMAN_MODE=independent
+      - OLLAMA_HOST=wingman-ollama:11434
+    depends_on:
+      - wingman-ollama
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  # Wingman's own Ollama instance
+  wingman-ollama:
+    image: ollama/ollama:latest
+    container_name: wingman-ollama
+    networks:
+      - wingman-net
+    volumes:
+      - wingman-models:/root/.ollama
+    ports:
+      - "11435:11434"  # Different port from main Ollama
+    restart: unless-stopped
+
+  # Intel-system runs in separate network
+  intel-engine:
+    build: ./engine
+    networks:
+      - intel-net  # Different network
+    volumes:
+      - intel-data:/data
+    ports:
+      - "8000:8000"
+
+networks:
+  wingman-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+  intel-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.29.0.0/16
+
+volumes:
+  intel-data:
+  wingman-models:

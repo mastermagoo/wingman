@@ -1,0 +1,26 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+
+# Virtual envs
+venv/
+.venv/
+env/
+ENV/
+
+# Editor / OS
+.vscode/
+.idea/
+*.code-workspace
+.DS_Store
+
+# Never track archives or secrets in this repo
+archive/
+*.env
+.env*
+secrets/
+credentials/
+wingman/bot_config.json

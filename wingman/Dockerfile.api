@@ -1,0 +1,37 @@
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        curl \
+        gcc \
+        postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy and install Python requirements
+COPY api_requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY api_server.py .
+COPY enhanced_verifier.py .
+COPY simple_verifier.py .
+COPY intel_integration.py .
+
+# Create non-root user
+RUN useradd -m -u 1000 wingman && \
+    chown -R wingman:wingman /app
+
+USER wingman
+
+# Expose API port
+EXPOSE 5000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+  CMD curl -f http://localhost:5000/health || exit 1
+
+# Run the API server
+CMD ["python", "-u", "api_server.py"]

@@ -1,0 +1,13 @@
+{
+  "bot_token": "YOUR_BOT_TOKEN_HERE",
+  "api_url": "http://localhost:8001",
+  "api_key": "YOUR_OPTIONAL_API_KEY",
+  "timeout": 5,
+  "retry_attempts": 3,
+  "allowed_users": [],
+  "max_claim_length": 500,
+  "enable_enhanced": true,
+  "log_to_database": false,
+  "log_level": "INFO",
+  "chat_id": "YOUR_CHAT_ID_HERE"
+}

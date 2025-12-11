@@ -1,0 +1,31 @@
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        curl \
+        gcc \
+        postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy and install Python requirements
+COPY api_requirements.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir python-telegram-bot==20.7
+
+# Copy bot code
+COPY telegram_bot.py .
+COPY bot_api_client.py .
+COPY intel_integration.py .
+
+# Create non-root user
+RUN useradd -m -u 1000 wingman && \
+    mkdir -p /app/logs && \
+    chown -R wingman:wingman /app
+
+USER wingman
+
+# Run the Telegram bot
+CMD ["python", "-u", "telegram_bot.py"]

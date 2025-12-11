@@ -1,0 +1,7 @@
+# Wingman API Server Requirements
+Flask==2.3.3
+flask-cors==4.0.0
+werkzeug==2.3.7
+
+# Optional for production deployment
+gunicorn==21.2.0
