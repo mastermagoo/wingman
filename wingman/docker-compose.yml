@@ -1,35 +1,40 @@
 version: '3.8'
 
+name: wingman_test
+
 services:
   # Wingman API Service
   wingman-api:
     build:
       context: .
       dockerfile: Dockerfile.api
-    container_name: wingman-api
+    container_name: wingman-api-test
     environment:
+      # Flask / API
       - FLASK_ENV=${FLASK_ENV:-development}
-      - API_PORT=${API_PORT:-5000}
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=${DB_NAME:-wingman}
-      - DB_USER=${DB_USER:-wingman}
-      - DB_PASSWORD=${DB_PASSWORD:-wingman_secure_pass}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      # Wingman 2.0 verifier listens on a fixed internal port in the container
+      - WINGMAN_PORT=5000
+      # Database config for intel_integration.IntelDatabase (Timescale/Postgres)
+      - TIMESCALE_HOST=postgres
+      - TIMESCALE_PORT=5432
+      - TIMESCALE_DB=${DB_NAME:-wingman}
+      - TIMESCALE_USER=${DB_USER:-wingman}
+      - TIMESCALE_PASS=${DB_PASSWORD:-wingman_secure_pass}
+      # Enhanced verifier (Ollama)
       - OLLAMA_HOST=ollama
       - OLLAMA_PORT=11434
     ports:
-      - "${API_PORT:-5000}:5000"
+      - "8101:5000"
     depends_on:
       - postgres
-      - redis
       - ollama
     networks:
       - wingman-network
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
+      # Mount intel-system so Wingman can verify real files in TEST
+      - /Volumes/Data/ai_projects/intel-system:/Volumes/Data/ai_projects/intel-system:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
@@ -42,7 +47,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.bot
-    container_name: wingman-telegram
+    container_name: wingman-telegram-test
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
       - CHAT_ID=${CHAT_ID}
@@ -65,14 +70,14 @@ services:
   # PostgreSQL with TimescaleDB
   postgres:
     image: timescale/timescaledb:latest-pg15
-    container_name: wingman-postgres
+    container_name: wingman-postgres-test
     environment:
       - POSTGRES_USER=${DB_USER:-wingman}
       - POSTGRES_PASSWORD=${DB_PASSWORD:-wingman_secure_pass}
       - POSTGRES_DB=${DB_NAME:-wingman}
       - POSTGRES_HOST_AUTH_METHOD=md5
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "55432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
@@ -85,27 +90,27 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis Cache
-  redis:
-    image: redis:7-alpine
-    container_name: wingman-redis
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - wingman-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+  # Redis Cache (not used in current Wingman 2.0 Phase 1, disabled to avoid port conflicts)
+  #redis:
+  #  image: redis:7-alpine
+  #  container_name: wingman-redis
+  #  ports:
+  #    - "${REDIS_PORT:-6379}:6379"
+  #  volumes:
+  #    - redis_data:/data
+  #  networks:
+  #    - wingman-network
+  #  restart: unless-stopped
+  #  healthcheck:
+  #    test: ["CMD", "redis-cli", "ping"]
+  #    interval: 10s
+  #    timeout: 5s
+  #    retries: 5
 
   # Ollama for Mistral 7B
   ollama:
     image: ollama/ollama:latest
-    container_name: wingman-ollama
+    container_name: wingman-ollama-test
     ports:
       - "${OLLAMA_PORT:-11434}:11434"
     volumes:
@@ -117,11 +122,12 @@ services:
       resources:
         limits:
           memory: 8G
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+    # Healthcheck disabled to avoid unstable status indicators; API availability is checked by Wingman itself.
+    #healthcheck:
+    #  test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+    #  interval: 30s
+    #  timeout: 10s
+    #  retries: 3
 
 networks:
   wingman-network:
@@ -130,8 +136,6 @@ networks:
 
 volumes:
   postgres_data:
-    driver: local
-  redis_data:
     driver: local
   ollama_data:
     driver: local
