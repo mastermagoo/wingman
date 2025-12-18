@@ -19,6 +19,10 @@ COPY api_server.py .
 COPY enhanced_verifier.py .
 COPY simple_verifier.py .
 COPY intel_integration.py .
+COPY instruction_validator.py .
+COPY wingman_audit_processor.py .
+COPY instruction_validator.py .
+COPY wingman_audit_processor.py .
 
 # Create non-root user
 RUN useradd -m -u 1000 wingman && \

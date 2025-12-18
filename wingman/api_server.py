@@ -2,6 +2,7 @@
 """
 Wingman Web API Server
 Exposes verification endpoints for the Wingman system
+Phases 1, 2, and 3 Integrated
 """
 
 from flask import Flask, jsonify, request
@@ -21,6 +22,7 @@ try:
     from simple_verifier import verify_claim as simple_verify_claim
     from enhanced_verifier import EnhancedVerifier
     from intel_integration import IntelDatabase
+    from instruction_validator import InstructionValidator
 except ImportError as e:
     print(f"Error importing modules: {e}")
     sys.exit(1)
@@ -28,8 +30,10 @@ except ImportError as e:
 app = Flask(__name__)
 CORS(app)  # Allow all origins for now
 
-# Initialize enhanced verifier
+# Initialize verifiers and validators
 enhanced_verifier = EnhancedVerifier()
+instruction_validator = InstructionValidator()
+AUDIT_LOG = "claims_audit.jsonl"
 
 # Initialize database connection
 try:
@@ -55,13 +59,7 @@ stats_fallback = {
 @app.route('/verify', methods=['POST'])
 def verify():
     """
-    Verify a claim using simple or enhanced verifier
-
-    Request body:
-    {
-        "claim": "I created /tmp/test.txt",
-        "use_enhanced": false
-    }
+    Phase 1/3: Verify a claim using simple or enhanced verifier
     """
     try:
         data = request.get_json()
@@ -86,7 +84,6 @@ def verify():
 
         # Choose verifier and run verification
         if use_enhanced:
-            # Enhanced verifier returns verdict string directly
             verdict = enhanced_verifier.verify_claim(claim)
             result = {
                 'verdict': verdict,
@@ -94,7 +91,6 @@ def verify():
                 'verifier': 'enhanced'
             }
         else:
-            # Simple verifier is a function that returns verdict
             verdict = simple_verify_claim(claim)
             result = {
                 'verdict': verdict,
@@ -102,7 +98,6 @@ def verify():
                 'verifier': 'simple'
             }
 
-        # Calculate processing time
         processing_time_ms = int((time.time() - start_time) * 1000)
 
         # Log to database if available
@@ -117,127 +112,117 @@ def verify():
                 )
             except Exception as e:
                 print(f"Failed to log to database: {e}")
-                # Fall back to in-memory stats
                 stats_fallback["total_verifications"] += 1
                 if verdict in stats_fallback["verdicts"]:
                     stats_fallback["verdicts"][verdict] += 1
         else:
-            # Update in-memory stats
             stats_fallback["total_verifications"] += 1
-            verdict = result.get('verdict', 'UNVERIFIABLE')
             if verdict in stats_fallback["verdicts"]:
                 stats_fallback["verdicts"][verdict] += 1
 
-        # Prepare response
-        response = {
+        return jsonify({
             "verdict": verdict,
             "details": result.get('details', 'No details available'),
             "timestamp": datetime.now().isoformat(),
             "verifier": "enhanced" if use_enhanced else "simple",
             "processing_time_ms": processing_time_ms
-        }
-
-        # Add additional fields from result if present
-        if 'evidence' in result:
-            response['evidence'] = result['evidence']
-        if 'llm_response' in result:
-            response['llm_analysis'] = result['llm_response']
-
-        return jsonify(response), 200
+        }), 200
 
     except Exception as e:
-        error_msg = f"Internal error: {str(e)}"
-        print(f"Error in /verify: {error_msg}")
-        print(traceback.format_exc())
-
         return jsonify({
-            "error": error_msg,
+            "error": str(e),
             "timestamp": datetime.now().isoformat()
         }), 500
+
+
+@app.route('/check', methods=['POST'])
+def check():
+    """
+    Phase 2: Validate instruction against 10-point framework
+    """
+    try:
+        data = request.get_json()
+        if not data or 'instruction' not in data:
+            return jsonify({
+                "error": "Missing 'instruction' field",
+                "approved": False,
+                "score": 0
+            }), 400
+        
+        result = instruction_validator.validate(data['instruction'])
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "approved": False,
+            "score": 0
+        }), 500
+
+
+@app.route('/log_claim', methods=['POST'])
+def log_claim():
+    """
+    Phase 3: Record a claim for future verification
+    """
+    try:
+        data = request.get_json()
+        if not data or 'claim' not in data:
+            return jsonify({"error": "Missing 'claim' field"}), 400
+
+        claim_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "worker_id": data.get("worker_id", "unknown"),
+            "claim": data.get("claim"),
+            "status": "PENDING_VERIFICATION"
+        }
+        
+        # Log to local file (Audit Trail)
+        with open(AUDIT_LOG, "a") as f:
+            f.write(json.dumps(claim_entry) + "\n")
+            
+        print(f"📝 Claim Logged: {data.get('claim')[:50]}...")
+        return jsonify({"status": "logged", "entry": claim_entry}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/health', methods=['GET'])
 def health():
     """
     Health check endpoint
-    Returns status of the API and verifiers
     """
-    try:
-        # Check if verifiers are available
-        simple_status = "available"  # Simple verifier is always available (it's a function)
-        enhanced_status = "unavailable"
-        database_status = "disconnected"
-
-        # Test enhanced verifier availability
-        try:
-            # Check if Mistral is available via Ollama
-            if hasattr(enhanced_verifier, 'mistral_available') and enhanced_verifier.mistral_available:
-                enhanced_status = "available"
-        except:
-            pass
-
-        # Test database connectivity
-        if db and db_available:
-            try:
-                # Try to get stats to test connection
-                db.get_stats()
-                database_status = "connected"
-            except Exception as e:
-                database_status = f"error: {str(e)}"
-
-        return jsonify({
-            "status": "healthy",
-            "verifiers": {
-                "simple": simple_status,
-                "enhanced": enhanced_status
-            },
-            "database": database_status,
-            "timestamp": datetime.now().isoformat()
-        }), 200
-
-    except Exception as e:
-        return jsonify({
-            "status": "unhealthy",
-            "error": str(e),
-            "timestamp": datetime.now().isoformat()
-        }), 500
+    return jsonify({
+        "status": "healthy",
+        "phase": "3",
+        "verifiers": {
+            "simple": "available",
+            "enhanced": "available" if hasattr(enhanced_verifier, 'mistral_available') and enhanced_verifier.mistral_available else "unavailable"
+        },
+        "database": "connected" if db and db_available else "memory",
+        "timestamp": datetime.now().isoformat()
+    }), 200
 
 
 @app.route('/stats', methods=['GET'])
 def get_stats():
     """
     Get verification statistics
-    Returns counts of verifications and verdict distributions
-    Supports time ranges: ?range=24h, 7d, 30d
     """
     try:
-        # Get time range from query params
         time_range = request.args.get('range', '24h')
+        range_hours = {'24h': 24, '7d': 168, '30d': 720}.get(time_range, 24)
 
-        # Convert range to hours
-        range_hours = {
-            '24h': 24,
-            '7d': 168,
-            '30d': 720
-        }.get(time_range, 24)
-
-        # Try to get stats from database
         if db and db_available:
-            try:
-                db_stats = db.get_stats(hours=range_hours)
-                return jsonify({
-                    "total_verifications": db_stats.get('total_verifications', 0),
-                    "verdicts": db_stats.get('verdicts', {}),
-                    "avg_processing_time_ms": db_stats.get('avg_processing_time_ms', 0),
-                    "time_range": time_range,
-                    "source": "database",
-                    "timestamp": datetime.now().isoformat()
-                }), 200
-            except Exception as e:
-                print(f"Failed to get stats from database: {e}")
-                # Fall back to in-memory stats
+            db_stats = db.get_stats(hours=range_hours)
+            return jsonify({
+                "total_verifications": db_stats.get('total_verifications', 0),
+                "verdicts": db_stats.get('verdicts', {}),
+                "avg_processing_time_ms": db_stats.get('avg_processing_time_ms', 0),
+                "time_range": time_range,
+                "source": "database",
+                "timestamp": datetime.now().isoformat()
+            }), 200
 
-        # Use in-memory fallback
         return jsonify({
             "total_verifications": stats_fallback["total_verifications"],
             "verdicts": stats_fallback["verdicts"],
@@ -245,100 +230,8 @@ def get_stats():
             "source": "memory",
             "timestamp": datetime.now().isoformat()
         }), 200
-
     except Exception as e:
-        return jsonify({
-            "error": f"Failed to retrieve stats: {str(e)}",
-            "timestamp": datetime.now().isoformat()
-        }), 500
-
-
-@app.route('/history', methods=['GET'])
-def get_history():
-    """
-    Get paginated verification history
-    Query params: ?page=1&limit=50
-    """
-    try:
-        # Get pagination params
-        page = int(request.args.get('page', 1))
-        limit = int(request.args.get('limit', 50))
-        limit = min(limit, 100)  # Cap at 100 per page
-
-        if db and db_available:
-            try:
-                history = db.get_verification_history(page=page, limit=limit)
-                return jsonify({
-                    "verifications": history.get('verifications', []),
-                    "total": history.get('total', 0),
-                    "page": page,
-                    "limit": limit,
-                    "timestamp": datetime.now().isoformat()
-                }), 200
-            except Exception as e:
-                print(f"Failed to get history from database: {e}")
-                # Return empty history on error
-                return jsonify({
-                    "verifications": [],
-                    "total": 0,
-                    "page": page,
-                    "limit": limit,
-                    "error": "Database not available",
-                    "timestamp": datetime.now().isoformat()
-                }), 200
-        else:
-            return jsonify({
-                "verifications": [],
-                "total": 0,
-                "page": page,
-                "limit": limit,
-                "error": "Database not available",
-                "timestamp": datetime.now().isoformat()
-            }), 200
-
-    except Exception as e:
-        return jsonify({
-            "error": f"Failed to retrieve history: {str(e)}",
-            "timestamp": datetime.now().isoformat()
-        }), 500
-
-
-@app.route('/false-claims', methods=['GET'])
-def get_false_claims():
-    """
-    Get analytics on false claims
-    Returns most common false claims
-    """
-    try:
-        if db and db_available:
-            try:
-                false_claims = db.get_false_claims_analytics()
-                return jsonify({
-                    "false_claims": false_claims.get('false_claims', []),
-                    "total_false": false_claims.get('total_false', 0),
-                    "timestamp": datetime.now().isoformat()
-                }), 200
-            except Exception as e:
-                print(f"Failed to get false claims from database: {e}")
-                return jsonify({
-                    "false_claims": [],
-                    "total_false": 0,
-                    "error": "Database not available",
-                    "timestamp": datetime.now().isoformat()
-                }), 200
-        else:
-            return jsonify({
-                "false_claims": [],
-                "total_false": 0,
-                "error": "Database not available",
-                "timestamp": datetime.now().isoformat()
-            }), 200
-
-    except Exception as e:
-        return jsonify({
-            "error": f"Failed to retrieve false claims: {str(e)}",
-            "timestamp": datetime.now().isoformat()
-        }), 500
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/', methods=['GET'])
@@ -348,80 +241,24 @@ def index():
     """
     return jsonify({
         "name": "Wingman Verification API",
-        "version": "1.0.0",
+        "version": "3.0.0",
+        "phase": "3",
         "endpoints": {
-            "POST /verify": "Verify a claim using simple or enhanced verifier",
-            "GET /health": "Check API and verifier health",
-            "GET /stats": "Get verification statistics (supports ?range=24h|7d|30d)",
-            "GET /history": "Get paginated verification history",
-            "GET /false-claims": "Get analytics on false claims"
-        },
-        "example": {
-            "endpoint": "POST /verify",
-            "body": {
-                "claim": "I created /tmp/test.txt",
-                "use_enhanced": False
-            }
+            "POST /check": "Validate instruction (Phase 2)",
+            "POST /log_claim": "Record worker claim (Phase 3)",
+            "POST /verify": "Verify a claim (Phase 1/3)",
+            "GET /health": "Check API status",
+            "GET /stats": "Get verification statistics"
         },
         "timestamp": datetime.now().isoformat()
     }), 200
 
 
-@app.errorhandler(404)
-def not_found(e):
-    """Handle 404 errors"""
-    return jsonify({
-        "error": "Endpoint not found",
-        "timestamp": datetime.now().isoformat()
-    }), 404
-
-
-@app.errorhandler(405)
-def method_not_allowed(e):
-    """Handle 405 errors"""
-    return jsonify({
-        "error": "Method not allowed",
-        "timestamp": datetime.now().isoformat()
-    }), 405
-
-
 if __name__ == '__main__':
-    """
-    Lightweight CLI runner for local/dev use.
-
-    Port selection priority:
-    1) Command-line:  --port 8101  or  -p 8101
-    2) Env var:       WINGMAN_PORT=8101
-    3) Default:       8001
-    """
-    # Default port
-    port = 8001
-
-    # Env var override
-    env_port = os.environ.get("WINGMAN_PORT")
-    if env_port:
-        try:
-            port = int(env_port)
-        except ValueError:
-            print(f"Invalid WINGMAN_PORT '{env_port}', falling back to {port}")
-
-    # Simple CLI arg parsing for --port / -p
-    args = sys.argv[1:]
-    for idx, arg in enumerate(args):
-        if arg in ("--port", "-p") and idx + 1 < len(args):
-            candidate = args[idx + 1]
-            try:
-                port = int(candidate)
-            except ValueError:
-                print(f"Invalid port '{candidate}' after {arg}, keeping {port}")
-            break
-
-    print("Starting Wingman API Server...")
-    print(f"Server running at http://localhost:{port}")
-    print("Press Ctrl+C to stop")
-
-    app.run(
-        host='0.0.0.0',
-        port=port,
-        debug=True
-    )
+    internal_port = int(os.getenv('API_INTERNAL_PORT', 5000))
+    # Fallback for PRD compose which uses 8001 mapping
+    if os.getenv('DEPLOYMENT_ENV') == 'prd':
+        internal_port = 8001
+        
+    print(f"🚀 Starting Wingman Phase 3 API Server on port {internal_port}...")
+    app.run(host='0.0.0.0', port=internal_port, debug=False)

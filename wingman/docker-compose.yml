@@ -12,6 +12,8 @@ services:
     environment:
       # Flask / API
       - FLASK_ENV=${FLASK_ENV:-development}
+      # Environment tag for logs and Telegram
+      - WINGMAN_ENV=TEST
       # Wingman 2.0 verifier listens on a fixed internal port in the container
       - WINGMAN_PORT=5000
       # Database config for intel_integration.IntelDatabase (Timescale/Postgres)
@@ -52,6 +54,7 @@ services:
       - BOT_TOKEN=${BOT_TOKEN}
       - CHAT_ID=${CHAT_ID}
       - API_URL=http://wingman-api:5000
+      - WINGMAN_ENV=TEST
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=${DB_NAME:-wingman}
