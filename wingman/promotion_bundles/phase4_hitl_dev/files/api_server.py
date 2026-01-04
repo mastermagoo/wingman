@@ -43,69 +43,19 @@ instruction_validator = InstructionValidator()
 AUDIT_LOG = os.path.join(os.path.dirname(__file__), "data", "claims_audit.jsonl")
 approval_store = approval_default_store()
 
-# ---------------------------------------------------------------------------
-# Phase 4 (HITL) approval endpoint protection
-#
-# Goal: minimize exposure and allow key separation:
-# - READ access (queue visibility, polling) can be restricted via READ keys
-# - DECIDE access (approve/reject) can be restricted via DECIDE keys
-# - REQUEST access (creating approvals) can be optionally restricted via REQUEST keys
-#
-# Backwards compatibility:
-# - If WINGMAN_APPROVAL_API_KEY is set and no READ/DECIDE/REQUEST keys are configured,
-#   require header X-Wingman-Approval-Key for protected endpoints.
-# ---------------------------------------------------------------------------
-
-LEGACY_APPROVAL_KEY = (os.getenv("WINGMAN_APPROVAL_API_KEY") or "").strip()
+APPROVAL_API_KEY = os.getenv("WINGMAN_APPROVAL_API_KEY", "").strip()
 
 
-def _parse_keys(env_name: str) -> set[str]:
-    raw = (os.getenv(env_name) or "").strip()
-    if not raw:
-        return set()
-    return {p.strip() for p in raw.split(",") if p.strip()}
-
-
-# Preferred (role-separated) keys (comma-separated lists allowed)
-APPROVAL_READ_KEYS = _parse_keys("WINGMAN_APPROVAL_READ_KEYS") | _parse_keys("WINGMAN_APPROVAL_READ_KEY")
-APPROVAL_DECIDE_KEYS = _parse_keys("WINGMAN_APPROVAL_DECIDE_KEYS") | _parse_keys("WINGMAN_APPROVAL_DECIDE_KEY")
-APPROVAL_REQUEST_KEYS = _parse_keys("WINGMAN_APPROVAL_REQUEST_KEYS") | _parse_keys("WINGMAN_APPROVAL_REQUEST_KEY")
-
-
-def _require_key(*, header: str, allowed: set[str]) -> Optional[tuple]:
+def _require_approval_key() -> Optional[tuple]:
     """
-    If 'allowed' is non-empty, require the request to provide a matching key in the given header.
+    Optional protection for approve/reject endpoints.
+    If WINGMAN_APPROVAL_API_KEY is set, require header X-Wingman-Approval-Key to match.
     """
-    if not allowed:
+    if not APPROVAL_API_KEY:
         return None
-    provided = (request.headers.get(header) or "").strip()
-    if not provided or provided not in allowed:
+    provided = (request.headers.get("X-Wingman-Approval-Key") or "").strip()
+    if not provided or provided != APPROVAL_API_KEY:
         return jsonify({"error": "Unauthorized"}), 401
-    return None
-
-
-def _require_approval_read() -> Optional[tuple]:
-    # If role-separated keys exist, enforce them.
-    if APPROVAL_READ_KEYS:
-        return _require_key(header="X-Wingman-Approval-Read-Key", allowed=APPROVAL_READ_KEYS)
-    # Otherwise fall back to legacy key if set.
-    if LEGACY_APPROVAL_KEY:
-        return _require_key(header="X-Wingman-Approval-Key", allowed={LEGACY_APPROVAL_KEY})
-    return None
-
-
-def _require_approval_decide() -> Optional[tuple]:
-    if APPROVAL_DECIDE_KEYS:
-        return _require_key(header="X-Wingman-Approval-Decide-Key", allowed=APPROVAL_DECIDE_KEYS)
-    if LEGACY_APPROVAL_KEY:
-        return _require_key(header="X-Wingman-Approval-Key", allowed={LEGACY_APPROVAL_KEY})
-    return None
-
-
-def _require_approval_request() -> Optional[tuple]:
-    # Request endpoint remains open unless explicitly configured.
-    if APPROVAL_REQUEST_KEYS:
-        return _require_key(header="X-Wingman-Approval-Request-Key", allowed=APPROVAL_REQUEST_KEYS)
     return None
 
 
@@ -327,10 +277,6 @@ def approvals_request():
       }
     """
     try:
-        auth = _require_approval_request()
-        if auth is not None:
-            return auth
-
         data = request.get_json() or {}
         instruction = (data.get("instruction") or "").strip()
         worker_id = str(data.get("worker_id", "unknown"))
@@ -406,9 +352,6 @@ def approvals_request():
 
 @app.route("/approvals/pending", methods=["GET"])
 def approvals_pending():
-    auth = _require_approval_read()
-    if auth is not None:
-        return auth
     try:
         limit = int(request.args.get("limit", "20"))
         pending = approval_store.list_pending(limit=limit)
@@ -419,9 +362,6 @@ def approvals_pending():
 
 @app.route("/approvals/<request_id>", methods=["GET"])
 def approvals_get(request_id: str):
-    auth = _require_approval_read()
-    if auth is not None:
-        return auth
     try:
         req = approval_store.get(request_id)
         if not req:
@@ -433,7 +373,7 @@ def approvals_get(request_id: str):
 
 @app.route("/approvals/<request_id>/approve", methods=["POST"])
 def approvals_approve(request_id: str):
-    auth = _require_approval_decide()
+    auth = _require_approval_key()
     if auth is not None:
         return auth
     try:
@@ -450,7 +390,7 @@ def approvals_approve(request_id: str):
 
 @app.route("/approvals/<request_id>/reject", methods=["POST"])
 def approvals_reject(request_id: str):
-    auth = _require_approval_decide()
+    auth = _require_approval_key()
     if auth is not None:
         return auth
     try:
@@ -470,16 +410,16 @@ def health():
     """
     Health check endpoint
     """
-        return jsonify({
-            "status": "healthy",
+    return jsonify({
+        "status": "healthy",
         "phase": "3",
-            "verifiers": {
+        "verifiers": {
             "simple": "available",
             "enhanced": "available" if hasattr(enhanced_verifier, 'mistral_available') and enhanced_verifier.mistral_available else "unavailable"
-            },
+        },
         "database": "connected" if db and db_available else "memory",
-            "timestamp": datetime.now().isoformat()
-        }), 200
+        "timestamp": datetime.now().isoformat()
+    }), 200
 
 
 @app.route('/stats', methods=['GET'])
@@ -492,15 +432,15 @@ def get_stats():
         range_hours = {'24h': 24, '7d': 168, '30d': 720}.get(time_range, 24)
 
         if db and db_available:
-                db_stats = db.get_stats(hours=range_hours)
-                return jsonify({
-                    "total_verifications": db_stats.get('total_verifications', 0),
-                    "verdicts": db_stats.get('verdicts', {}),
-                    "avg_processing_time_ms": db_stats.get('avg_processing_time_ms', 0),
-                    "time_range": time_range,
-                    "source": "database",
-                    "timestamp": datetime.now().isoformat()
-                }), 200
+            db_stats = db.get_stats(hours=range_hours)
+            return jsonify({
+                "total_verifications": db_stats.get('total_verifications', 0),
+                "verdicts": db_stats.get('verdicts', {}),
+                "avg_processing_time_ms": db_stats.get('avg_processing_time_ms', 0),
+                "time_range": time_range,
+                "source": "database",
+                "timestamp": datetime.now().isoformat()
+            }), 200
 
         return jsonify({
             "total_verifications": stats_fallback["total_verifications"],

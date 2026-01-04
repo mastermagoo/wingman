@@ -16,13 +16,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY api_server.py .
+COPY approval_store.py .
 COPY enhanced_verifier.py .
 COPY simple_verifier.py .
 COPY intel_integration.py .
 COPY instruction_validator.py .
 COPY wingman_audit_processor.py .
-COPY instruction_validator.py .
-COPY wingman_audit_processor.py .
+COPY wingman_watcher.py .
 
 # Create non-root user
 RUN useradd -m -u 1000 wingman && \

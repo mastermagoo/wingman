@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 try:
     import telebot  # pyTelegramBotAPI
-from telebot import types
+    from telebot import types
     from telebot.apihelper import ApiTelegramException
 except ModuleNotFoundError as e:
     print("Error: Telegram dependency missing.")
@@ -66,16 +66,15 @@ def _load_env_file(path: Path) -> bool:
 
 def _bootstrap_env():
     """
-    Load DEV/TEST/PRD-style env files automatically so operators don't have to export tokens repeatedly.
+    Load DEV/PRD-style env files automatically so operators don't have to export tokens repeatedly.
     Precedence (first found wins per var):
       - .env (common)
       - .env.dev (DEV)
-      - .env.test (TEST)
       - .env.prd (PRD)
     """
     base = Path(__file__).parent
     loaded = []
-    for name in [".env", ".env.dev", ".env.test", ".env.prd"]:
+    for name in [".env", ".env.dev", ".env.prd"]:
         p = base / name
         if _load_env_file(p):
             loaded.append(name)
@@ -83,8 +82,6 @@ def _bootstrap_env():
     # Help operators: template file is not auto-loaded.
     if (base / "env.dev.example").exists() and not (base / ".env.dev").exists():
         logger.warning("Found env.dev.example but .env.dev is missing. Copy it: cp env.dev.example .env.dev")
-    if (base / "env.test.example").exists() and not (base / ".env.test").exists():
-        logger.warning("Found env.test.example but .env.test is missing. Copy it: cp env.test.example .env.test")
 
     if loaded:
         logger.info(f"Loaded environment variables from: {', '.join(loaded)}")

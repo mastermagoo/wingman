@@ -3,6 +3,16 @@
 ## Overview
 Wingman is an AI claim verification system that validates whether AI agents actually performed the actions they claim.
 
+## Wingman 1 vs Wingman 2 (Product Architecture)
+
+- **Wingman 1 (Verifier Service)**: deterministic “Truth as a Service” API (`/verify`) + evidence capture.  
+- **Wingman 2 (Governance Layer)**: policy gates + claims ledger + approvals + autonomous response, built on Wingman 1.
+
+Authoritative docs:
+- `DEPLOYMENT_PLAN.md` (master roadmap + current environment reality)
+- `WINGMAN_2_PHASED_PLAN.md` (Wingman 1 vs 2 product architecture)
+- `DEPLOYMENT_COMPLETE.md` (execution log / change record)
+
 ## Components
 
 ### 1. Simple Verifier (`simple_verifier.py`)
@@ -44,10 +54,10 @@ python3 enhanced_verifier.py "I started Docker and created backup.tar"
 
 ## Development Status
 
-**Phase 2 Complete (Sept 21, 2025):**
-- ✅ Step C: Mistral integration tested
-- ✅ Step B: Enhanced verifier created
-- ✅ Step A: Simple verifier improved
+**Current (Mac Studio TEST + PRD):**
+- ✅ Phase 2: Instruction Gate (`POST /check`)
+- ✅ Phase 3: Claims Logger + Auditor (`POST /log_claim`, `POST /verify`)
+- 🟡 Phase 4: Watcher / Incident Response (implementation in progress, see roadmap)
 
 ## Documentation
 

@@ -568,65 +568,11 @@ class IntelDatabase:
             logger.info("Database connection pool closed")
 
 
-# Convenience functions for standalone usage
-def test_connection():
-    """Test database connection"""
-    try:
-        db = IntelDatabase()
-        stats = db.get_stats('1h')
-        print(f"Database connection successful. Stats: {stats}")
-        db.close()
-        return True
-    except Exception as e:
-        print(f"Database connection failed: {e}")
-        return False
+"""
+Note: Convenience CLI helpers for manual DB testing were removed.
 
-
-def log_test_verification():
-    """Log a test verification"""
-    try:
-        db = IntelDatabase()
-        success = db.log_verification(
-            claim="Test claim from intel_integration.py",
-            verdict="TRUE",
-            verifier_type="simple",
-            details={"test": True, "source": "manual"},
-            processing_time_ms=100,
-            confidence_score=0.95,
-            evidence_found=["Test evidence 1", "Test evidence 2"],
-            checked_sources=["filesystem", "processes"]
-        )
-        print(f"Test verification logged: {success}")
-        db.close()
-        return success
-    except Exception as e:
-        print(f"Failed to log test verification: {e}")
-        return False
-
-
-if __name__ == "__main__":
-    # Test the database connection and basic operations
-    print("Testing Intel Database Integration...")
-
-    if test_connection():
-        print("✓ Connection test passed")
-
-        if log_test_verification():
-            print("✓ Verification logging test passed")
-
-            # Get and display stats
-            db = IntelDatabase()
-            stats = db.get_stats('24h')
-            # Convert Decimals to floats for JSON serialization
-            stats_json = json.dumps(stats, indent=2, default=lambda x: float(x) if isinstance(x, Decimal) else str(x))
-            print(f"\n24-hour stats: {stats_json}")
-
-            # Get recent history
-            history = db.get_history(limit=5)
-            print(f"\nRecent verifications: {len(history)} records")
-
-            db.close()
-        else:
-            print("✗ Verification logging test failed")
-    else:
-        print("✗ Connection test failed")
+All access to the Wingman database should happen via the Wingman API
+layer or controlled maintenance scripts, not by executing this module
+directly. This reduces the chance that agents bypass the API or modify
+logs outside the audited path.
+"""

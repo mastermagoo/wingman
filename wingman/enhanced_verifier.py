@@ -328,18 +328,21 @@ Return ONLY this JSON structure (no other text):
         return "UNVERIFIABLE"
 
 def main():
-    """Main function"""
-    print("🚀 Enhanced Wingman Verifier (with Mistral 7B)")
+    """
+    DEV-only helper.
+
+    Note: In normal operation, Wingman should route claims to this
+    verifier via the API layer, not by executing this module directly.
+    """
+    print("🚀 Enhanced Wingman Verifier (DEV helper, with Mistral 7B)")
     print("=" * 60)
 
     verifier = EnhancedVerifier()
 
     if len(sys.argv) > 1:
-        # Command line argument
         claim = " ".join(sys.argv[1:])
         verifier.verify_claim(claim)
     else:
-        # Interactive mode
         print("\nEnter AI claims to verify (or 'quit' to exit):")
         print("Examples:")
         print("  - I created /tmp/backup.tar")
@@ -355,5 +358,4 @@ def main():
 
     print("\n✅ Enhanced verification complete!")
 
-if __name__ == "__main__":
-    main()
+# Intentionally no __main__ block – engine is used via Wingman API only.

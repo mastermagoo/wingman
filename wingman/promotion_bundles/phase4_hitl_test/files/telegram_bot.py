@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 try:
     import telebot  # pyTelegramBotAPI
-from telebot import types
+    from telebot import types
     from telebot.apihelper import ApiTelegramException
 except ModuleNotFoundError as e:
     print("Error: Telegram dependency missing.")

@@ -30,19 +30,8 @@ class WingmanAPIClient:
         if self.api_key:
             self.session.headers['X-API-Key'] = self.api_key
 
-        # Phase 4: Approval security headers (prefer role-separated keys)
-        # - READ key: required for GET /approvals/pending and GET /approvals/<id> when enabled
-        # - DECIDE key: required for POST /approvals/<id>/approve|reject when enabled
-        # Back-compat: legacy key uses X-Wingman-Approval-Key
-        self.approval_read_key = (os.getenv("WINGMAN_APPROVAL_READ_KEY") or "").strip()
-        if self.approval_read_key:
-            self.session.headers["X-Wingman-Approval-Read-Key"] = self.approval_read_key
-
-        self.approval_decide_key = (os.getenv("WINGMAN_APPROVAL_DECIDE_KEY") or "").strip()
-        if self.approval_decide_key:
-            self.session.headers["X-Wingman-Approval-Decide-Key"] = self.approval_decide_key
-
-        self.approval_key = (os.getenv("WINGMAN_APPROVAL_API_KEY") or "").strip()
+        # Optional approval API key (Phase 4: approve/reject protection)
+        self.approval_key = os.getenv("WINGMAN_APPROVAL_API_KEY")
         if self.approval_key:
             self.session.headers["X-Wingman-Approval-Key"] = self.approval_key
 

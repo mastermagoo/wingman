@@ -11,11 +11,10 @@ from datetime import datetime
 
 def extract_file_paths(text):
     """Extract potential file paths from text"""
-    # Improved patterns based on enhanced verifier
+    # Improved patterns - specifically look for data/ or absolute paths
     patterns = [
-        r'/[^\s]+',  # Unix paths
-        r'\w+\.(txt|json|py|md|log|csv|sql|db|tar|zip|conf|cfg|yaml|yml)',  # More extensions
-        r'[A-Za-z]:\\[^\s]+',  # Windows paths
+        r'(?:^|\s)(/[^\s]+)',  # Unix absolute paths (only at start or after whitespace)
+        r'([\w\./-]+\.(?:txt|json|py|md|log|csv|sql|db|tar|zip|conf|cfg|yaml|yml))',  # Relative paths with extensions
     ]
 
     paths = []
@@ -52,9 +51,14 @@ def extract_process_names(text):
     return list(set(processes))
 
 def check_file_exists(filepath):
-    """Check if a file actually exists"""
+    """Check if a file actually exists, handling both relative and absolute paths"""
     try:
-        return os.path.exists(filepath)
+        # If absolute path, check it
+        if os.path.isabs(filepath):
+            return os.path.exists(filepath)  # absolute path
+        
+        # If relative, check from /app (current working dir in Docker)
+        return os.path.exists(os.path.abspath(filepath))
     except:
         return False
 
@@ -178,16 +182,19 @@ def verify_claim(claim_text):
     return "UNVERIFIABLE"
 
 def main():
-    """Main function"""
-    print("🚀 Simple Wingman Verifier")
+    """
+    DEV-only helper.
+
+    Note: In normal operation, Wingman should call verify_claim via the
+    API layer, not by executing this module directly.
+    """
+    print("🚀 Simple Wingman Verifier (DEV helper)")
     print("=" * 50)
     
     if len(sys.argv) > 1:
-        # Command line argument
         claim = " ".join(sys.argv[1:])
         verify_claim(claim)
     else:
-        # Interactive mode
         print("Enter AI claims to verify (or 'quit' to exit):")
         while True:
             claim = input("\n> ").strip()
@@ -198,5 +205,4 @@ def main():
     
     print("\n✅ Verification complete!")
 
-if __name__ == "__main__":
-    main()
+# Intentionally no __main__ block – engine is used via Wingman API only.

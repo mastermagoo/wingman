@@ -1,0 +1,810 @@
+diff --git a/wingman/api_server.py b/wingman/api_server.py
+index b9dddd6c..d632f2cf 100644
+--- a/wingman/api_server.py
++++ b/wingman/api_server.py
+@@ -23,6 +23,7 @@ try:
+     from enhanced_verifier import EnhancedVerifier
+     from intel_integration import IntelDatabase
+     from instruction_validator import InstructionValidator
++    from approval_store import default_store as approval_default_store
+ except ImportError as e:
+     print(f"Error importing modules: {e}")
+     sys.exit(1)
+@@ -33,7 +34,78 @@ CORS(app)  # Allow all origins for now
+ # Initialize verifiers and validators
+ enhanced_verifier = EnhancedVerifier()
+ instruction_validator = InstructionValidator()
+-AUDIT_LOG = "claims_audit.jsonl"
++# Path to audit log - using relative path from app root
++AUDIT_LOG = os.path.join(os.path.dirname(__file__), "data", "claims_audit.jsonl")
++approval_store = approval_default_store()
++
++APPROVAL_API_KEY = os.getenv("WINGMAN_APPROVAL_API_KEY", "").strip()
++
++
++def _require_approval_key() -> Optional[tuple]:
++    """
++    Optional protection for approve/reject endpoints.
++    If WINGMAN_APPROVAL_API_KEY is set, require header X-Wingman-Approval-Key to match.
++    """
++    if not APPROVAL_API_KEY:
++        return None
++    provided = (request.headers.get("X-Wingman-Approval-Key") or "").strip()
++    if not provided or provided != APPROVAL_API_KEY:
++        return jsonify({"error": "Unauthorized"}), 401
++    return None
++
++
++def assess_risk(instruction_text: str, task_name: str = "", deployment_env: str = "") -> Dict[str, str]:
++    """
++    Heuristic risk scorer. Conservative by design:
++    - PRD always requires approval unless explicitly disabled via WINGMAN_REQUIRE_APPROVAL=0
++    - Mentions of PROD/production, destructive ops, secrets, forced operations => HIGH
++    """
++    require = os.getenv("WINGMAN_REQUIRE_APPROVAL", "").strip()
++    if require == "0":
++        return {"risk_level": "LOW", "risk_reason": "Approval disabled via WINGMAN_REQUIRE_APPROVAL=0"}
++
++    txt = f"{task_name}\n{instruction_text}\n{deployment_env}".lower()
++    env = (deployment_env or os.getenv("DEPLOYMENT_ENV", "")).lower()
++
++    if env == "prd":
++        return {"risk_level": "HIGH", "risk_reason": "Deployment environment is PRD"}
++
++    high_terms = [
++        "prod",
++        "production",
++        "drop ",
++        "truncate ",
++        "delete ",
++        "rm -",
++        "wipe",
++        "format ",
++        "rotate key",
++        "secret",
++        "token",
++        "password",
++        "client secret",
++        "--force",
++        "--delete",
++    ]
++    if any(t in txt for t in high_terms):
++        return {"risk_level": "HIGH", "risk_reason": "High-risk keywords detected"}
++
++    medium_terms = [
++        "migration",
++        "deploy",
++        "release",
++        "schema",
++        "postgres",
++        "redis",
++        "firewall",
++        "permissions",
++        "iam",
++        "sudo",
++    ]
++    if any(t in txt for t in medium_terms):
++        return {"risk_level": "MEDIUM", "risk_reason": "Medium-risk keywords detected"}
++
++    return {"risk_level": "LOW", "risk_reason": "No high-risk indicators detected"}
+ 
+ # Initialize database connection
+ try:
+@@ -186,6 +258,126 @@ def log_claim():
+         return jsonify({"error": str(e)}), 500
+ 
+ 
++@app.route("/approvals/request", methods=["POST"])
++def approvals_request():
++    """
++    Phase 4 (Original): Request human approval before proceeding with high-risk work.
++
++    Body:
++      {
++        "worker_id": "123",
++        "task_name": "Deploy schema changes",
++        "instruction": "....",
++        "deployment_env": "dev|test|prd" (optional)
++      }
++    """
++    try:
++        data = request.get_json() or {}
++        instruction = (data.get("instruction") or "").strip()
++        worker_id = str(data.get("worker_id", "unknown"))
++        task_name = (data.get("task_name") or "").strip()
++        deployment_env = (data.get("deployment_env") or os.getenv("DEPLOYMENT_ENV", "")).strip()
++
++        if not instruction:
++            return jsonify({"error": "Missing 'instruction' field"}), 400
++
++        risk = assess_risk(instruction, task_name=task_name, deployment_env=deployment_env)
++        risk_level = risk["risk_level"]
++        risk_reason = risk["risk_reason"]
++
++        if risk_level == "LOW":
++            req = approval_store.create_request(
++                worker_id=worker_id,
++                task_name=task_name,
++                instruction=instruction,
++                risk_level=risk_level,
++                risk_reason=risk_reason,
++                status="AUTO_APPROVED",
++            )
++            return jsonify(
++                {
++                    "needs_approval": False,
++                    "status": "AUTO_APPROVED",
++                    "request": req.to_dict(),
++                    "risk": risk,
++                }
++            ), 200
++
++        req = approval_store.create_request(
++            worker_id=worker_id,
++            task_name=task_name,
++            instruction=instruction,
++            risk_level=risk_level,
++            risk_reason=risk_reason,
++            status="PENDING",
++        )
++        return jsonify(
++            {
++                "needs_approval": True,
++                "status": "PENDING",
++                "request": req.to_dict(),
++                "risk": risk,
++            }
++        ), 200
++    except Exception as e:
++        return jsonify({"error": str(e)}), 500
++
++
++@app.route("/approvals/pending", methods=["GET"])
++def approvals_pending():
++    try:
++        limit = int(request.args.get("limit", "20"))
++        pending = approval_store.list_pending(limit=limit)
++        return jsonify({"pending": [p.to_dict() for p in pending], "count": len(pending)}), 200
++    except Exception as e:
++        return jsonify({"error": str(e)}), 500
++
++
++@app.route("/approvals/<request_id>", methods=["GET"])
++def approvals_get(request_id: str):
++    try:
++        req = approval_store.get(request_id)
++        if not req:
++            return jsonify({"error": "Not found"}), 404
++        return jsonify(req.to_dict()), 200
++    except Exception as e:
++        return jsonify({"error": str(e)}), 500
++
++
++@app.route("/approvals/<request_id>/approve", methods=["POST"])
++def approvals_approve(request_id: str):
++    auth = _require_approval_key()
++    if auth is not None:
++        return auth
++    try:
++        data = request.get_json() or {}
++        decided_by = (data.get("decided_by") or "").strip() or None
++        note = (data.get("note") or "").strip() or None
++        req = approval_store.decide(request_id, decision="APPROVED", decided_by=decided_by, decision_note=note)
++        if not req:
++            return jsonify({"error": "Not found"}), 404
++        return jsonify(req.to_dict()), 200
++    except Exception as e:
++        return jsonify({"error": str(e)}), 500
++
++
++@app.route("/approvals/<request_id>/reject", methods=["POST"])
++def approvals_reject(request_id: str):
++    auth = _require_approval_key()
++    if auth is not None:
++        return auth
++    try:
++        data = request.get_json() or {}
++        decided_by = (data.get("decided_by") or "").strip() or None
++        note = (data.get("note") or "").strip() or None
++        req = approval_store.decide(request_id, decision="REJECTED", decided_by=decided_by, decision_note=note)
++        if not req:
++            return jsonify({"error": "Not found"}), 404
++        return jsonify(req.to_dict()), 200
++    except Exception as e:
++        return jsonify({"error": str(e)}), 500
++
++
+ @app.route('/health', methods=['GET'])
+ def health():
+     """
+@@ -247,6 +439,11 @@ def index():
+             "POST /check": "Validate instruction (Phase 2)",
+             "POST /log_claim": "Record worker claim (Phase 3)",
+             "POST /verify": "Verify a claim (Phase 1/3)",
++            "POST /approvals/request": "Request human approval (Phase 4)",
++            "GET /approvals/pending": "List pending approvals (Phase 4)",
++            "GET /approvals/<id>": "Get approval request (Phase 4)",
++            "POST /approvals/<id>/approve": "Approve (Phase 4)",
++            "POST /approvals/<id>/reject": "Reject (Phase 4)",
+             "GET /health": "Check API status",
+             "GET /stats": "Get verification statistics"
+         },
+diff --git a/wingman/bot_api_client.py b/wingman/bot_api_client.py
+index 8a979568..eb31fb8e 100644
+--- a/wingman/bot_api_client.py
++++ b/wingman/bot_api_client.py
+@@ -24,12 +24,81 @@ class WingmanAPIClient:
+         if self.api_key:
+             self.session.headers['X-API-Key'] = self.api_key
+ 
++        # Optional approval API key (Phase 4: approve/reject protection)
++        self.approval_key = os.getenv("WINGMAN_APPROVAL_API_KEY")
++        if self.approval_key:
++            self.session.headers["X-Wingman-Approval-Key"] = self.approval_key
++
+         # Connection settings
+         self.timeout = 5
+         self.retry_attempts = 3
+ 
+         logger.info(f"API Client initialized for {self.api_url}")
+ 
++    def request_approval(self, worker_id: str, task_name: str, instruction: str, deployment_env: str = "") -> Dict:
++        """
++        Phase 4: Request a human approval decision (or auto-approve).
++        """
++        try:
++            endpoint = f"{self.api_url}/approvals/request"
++            payload = {
++                "worker_id": worker_id,
++                "task_name": task_name,
++                "instruction": instruction,
++                "deployment_env": deployment_env,
++            }
++            resp = self.session.post(endpoint, json=payload, timeout=self.timeout)
++            if resp.status_code == 200:
++                return {"success": True, **resp.json()}
++            return {"success": False, "error": f"API returned {resp.status_code}", "details": resp.text}
++        except Exception as e:
++            return {"success": False, "error": str(e)}
++
++    def list_pending_approvals(self, limit: int = 20) -> Dict:
++        """
++        Phase 4: List pending approvals.
++        """
++        try:
++            endpoint = f"{self.api_url}/approvals/pending"
++            resp = self.session.get(endpoint, params={"limit": int(limit)}, timeout=self.timeout)
++            if resp.status_code == 200:
++                return {"success": True, **resp.json()}
++            return {"success": False, "error": f"API returned {resp.status_code}", "details": resp.text}
++        except Exception as e:
++            return {"success": False, "error": str(e)}
++
++    def get_approval(self, request_id: str) -> Dict:
++        try:
++            endpoint = f"{self.api_url}/approvals/{request_id}"
++            resp = self.session.get(endpoint, timeout=self.timeout)
++            if resp.status_code == 200:
++                return {"success": True, "approval": resp.json()}
++            return {"success": False, "error": f"API returned {resp.status_code}", "details": resp.text}
++        except Exception as e:
++            return {"success": False, "error": str(e)}
++
++    def approve(self, request_id: str, decided_by: str = "", note: str = "") -> Dict:
++        try:
++            endpoint = f"{self.api_url}/approvals/{request_id}/approve"
++            payload = {"decided_by": decided_by, "note": note}
++            resp = self.session.post(endpoint, json=payload, timeout=self.timeout)
++            if resp.status_code == 200:
++                return {"success": True, "approval": resp.json()}
++            return {"success": False, "error": f"API returned {resp.status_code}", "details": resp.text}
++        except Exception as e:
++            return {"success": False, "error": str(e)}
++
++    def reject(self, request_id: str, decided_by: str = "", note: str = "") -> Dict:
++        try:
++            endpoint = f"{self.api_url}/approvals/{request_id}/reject"
++            payload = {"decided_by": decided_by, "note": note}
++            resp = self.session.post(endpoint, json=payload, timeout=self.timeout)
++            if resp.status_code == 200:
++                return {"success": True, "approval": resp.json()}
++            return {"success": False, "error": f"API returned {resp.status_code}", "details": resp.text}
++        except Exception as e:
++            return {"success": False, "error": str(e)}
++
+     def verify_claim(self, claim: str, use_enhanced: bool = False) -> Dict:
+         """
+         Call API /verify endpoint
+@@ -45,7 +114,7 @@ class WingmanAPIClient:
+             endpoint = f"{self.api_url}/verify"
+             payload = {
+                 "claim": claim,
+-                "enhanced": use_enhanced,
++                "use_enhanced": use_enhanced,
+                 "source": "telegram"
+             }
+ 
+diff --git a/wingman/docker-compose.yml b/wingman/docker-compose.yml
+index 96eed761..53e80cdb 100644
+--- a/wingman/docker-compose.yml
++++ b/wingman/docker-compose.yml
+@@ -10,6 +10,7 @@ services:
+     environment:
+       - FLASK_ENV=${FLASK_ENV:-development}
+       - API_PORT=${API_PORT:-5000}
++      - DEPLOYMENT_ENV=${DEPLOYMENT_ENV:-dev}
+       - DB_HOST=postgres
+       - DB_PORT=5432
+       - DB_NAME=${DB_NAME:-wingman}
+@@ -19,6 +20,8 @@ services:
+       - REDIS_PORT=6379
+       - OLLAMA_HOST=ollama
+       - OLLAMA_PORT=11434
++      - WINGMAN_APPROVAL_DB=${WINGMAN_APPROVAL_DB:-data/approvals.db}
++      - WINGMAN_APPROVAL_API_KEY=${WINGMAN_APPROVAL_API_KEY:-}
+     ports:
+       - "${API_PORT:-5000}:5000"
+     depends_on:
+@@ -46,12 +49,15 @@ services:
+     environment:
+       - BOT_TOKEN=${BOT_TOKEN}
+       - CHAT_ID=${CHAT_ID}
+-      - API_URL=http://wingman-api:5000
++      - API_URL=${API_URL:-http://wingman-api:5000}
++      - WINGMAN_APPROVAL_API_KEY=${WINGMAN_APPROVAL_API_KEY:-}
++      - ALLOWED_USERS=${ALLOWED_USERS:-}
+       - DB_HOST=postgres
+       - DB_PORT=5432
+       - DB_NAME=${DB_NAME:-wingman}
+       - DB_USER=${DB_USER:-wingman}
+       - DB_PASSWORD=${DB_PASSWORD:-wingman_secure_pass}
++      - DEPLOYMENT_ENV=${DEPLOYMENT_ENV:-dev}
+     depends_on:
+       - wingman-api
+       - postgres
+@@ -59,7 +65,6 @@ services:
+       - wingman-network
+     volumes:
+       - ./logs:/app/logs
+-      - ./bot_config.json:/app/bot_config.json:ro
+     restart: unless-stopped
+ 
+   # PostgreSQL with TimescaleDB
+diff --git a/wingman/telegram_bot.py b/wingman/telegram_bot.py
+index 61b5a8ac..3e71680c 100644
+--- a/wingman/telegram_bot.py
++++ b/wingman/telegram_bot.py
+@@ -30,14 +30,39 @@ CONFIG_PATH = Path(__file__).parent / 'bot_config.json'
+ TEMPLATE_PATH = Path(__file__).parent / 'bot_config.json.template'
+ 
+ def load_config():
+-    """Load bot configuration from file"""
+-    if not CONFIG_PATH.exists():
+-        logger.error(f"Config file not found at {CONFIG_PATH}")
+-        logger.info(f"Please copy {TEMPLATE_PATH} to {CONFIG_PATH} and add your bot token")
++    """
++    Load bot configuration (env-first, file-fallback).
++
++    Env vars (recommended for TEST/PRD):
++      - BOT_TOKEN
++      - API_URL (default: http://localhost:8001)
++      - CHAT_ID (optional: restrict bot to a specific chat)
++      - ALLOWED_USERS (optional: comma-separated Telegram user IDs)
++    """
++    cfg = {}
++
++    # Optional file fallback for DEV convenience
++    if CONFIG_PATH.exists():
++        try:
++            with open(CONFIG_PATH, 'r') as f:
++                cfg = json.load(f) or {}
++        except Exception as e:
++            logger.warning(f"Failed to read {CONFIG_PATH}: {e}")
++
++    # Env overrides (env-first)
++    cfg["bot_token"] = os.getenv("BOT_TOKEN", cfg.get("bot_token", "")).strip()
++    cfg["api_url"] = os.getenv("API_URL", cfg.get("api_url", "http://localhost:8001")).strip()
++    cfg["chat_id"] = os.getenv("CHAT_ID", str(cfg.get("chat_id", ""))).strip()
++
++    allowed_users_env = os.getenv("ALLOWED_USERS", "").strip()
++    if allowed_users_env:
++        cfg["allowed_users"] = [u.strip() for u in allowed_users_env.split(",") if u.strip()]
++
++    if not cfg.get("bot_token"):
++        logger.error("BOT_TOKEN is required (set env BOT_TOKEN or provide bot_config.json)")
+         sys.exit(1)
+ 
+-    with open(CONFIG_PATH, 'r') as f:
+-        return json.load(f)
++    return cfg
+ 
+ # Load configuration
+ config = load_config()
+@@ -48,6 +73,33 @@ api_url = config.get('api_url', 'http://localhost:8001')
+ api_client = WingmanAPIClient(api_url=api_url)
+ logger.info(f"Bot connected to API at {api_url}")
+ 
++
++def _is_allowed(message) -> bool:
++    """Optional security guardrails for bot usage."""
++    # Restrict to a single chat if CHAT_ID provided
++    chat_id = (config.get("chat_id") or "").strip()
++    if chat_id:
++        try:
++            if str(message.chat.id) != str(chat_id):
++                return False
++        except Exception:
++            return False
++
++    # Restrict to allowed users if configured
++    allowed = config.get("allowed_users") or []
++    if allowed:
++        try:
++            return str(message.from_user.id) in {str(x) for x in allowed}
++        except Exception:
++            return False
++
++    return True
++
++
++def _deny(message, reason: str = "Not authorized"):
++    bot.reply_to(message, f"⛔ {reason}")
++    logger.warning(f"Denied bot command from user={getattr(message.from_user,'id',None)} chat={getattr(message.chat,'id',None)}: {reason}")
++
+ def format_verification_result(result, claim_text):
+     """Format API verification result for Telegram"""
+     # Determine verdict emoji and text
+@@ -225,6 +277,8 @@ def format_api_status(status):
+ @bot.message_handler(commands=['start', 'help'])
+ def send_help(message):
+     """Handle /help and /start commands"""
++    if not _is_allowed(message):
++        return _deny(message)
+     help_text = """
+ 🤖 *Wingman Verification Bot*
+ 
+@@ -236,11 +290,17 @@ I verify AI-generated claims by checking actual system state through the Wingman
+ /stats - Recent verification stats
+ /history - Show recent verifications
+ /api\\_status - Check API health
++/pending - List pending approvals (Phase 4)
++/approve `<id>` `[note]` - Approve a request (Phase 4)
++/reject `<id>` `[note]` - Reject a request (Phase 4)
+ /help - Show this message
+ 
+ *Examples:*
+ /verify I created /tmp/test.txt
+ /verify\\_enhanced Docker is running on port 8080
++/pending
++/approve 6b0c... Looks good
++/reject 6b0c... Too risky
+ 
+ *How it works:*
+ • Simple: Checks files and processes directly
+@@ -253,6 +313,8 @@ I verify AI-generated claims by checking actual system state through the Wingman
+ @bot.message_handler(commands=['verify'])
+ def verify_command(message):
+     """Handle /verify command for simple verification via API"""
++    if not _is_allowed(message):
++        return _deny(message)
+     # Extract claim text
+     claim_text = message.text[8:].strip()  # Remove '/verify ' prefix
+ 
+@@ -285,6 +347,8 @@ def verify_command(message):
+ @bot.message_handler(commands=['verify_enhanced'])
+ def verify_enhanced_command(message):
+     """Handle /verify_enhanced command for AI-enhanced verification via API"""
++    if not _is_allowed(message):
++        return _deny(message)
+     # Extract claim text
+     claim_text = message.text[16:].strip()  # Remove '/verify_enhanced ' prefix
+ 
+@@ -322,6 +386,8 @@ def verify_enhanced_command(message):
+ @bot.message_handler(commands=['stats'])
+ def stats_command(message):
+     """Handle /stats command to show verification statistics from API"""
++    if not _is_allowed(message):
++        return _deny(message)
+     # Send typing indicator
+     bot.send_chat_action(message.chat.id, 'typing')
+ 
+@@ -342,6 +408,8 @@ def stats_command(message):
+ @bot.message_handler(commands=['history'])
+ def history_command(message):
+     """Handle /history command to show recent verifications from API"""
++    if not _is_allowed(message):
++        return _deny(message)
+     # Send typing indicator
+     bot.send_chat_action(message.chat.id, 'typing')
+ 
+@@ -362,6 +430,8 @@ def history_command(message):
+ @bot.message_handler(commands=['api_status'])
+ def api_status_command(message):
+     """Handle /api_status command to check API health"""
++    if not _is_allowed(message):
++        return _deny(message)
+     # Send typing indicator
+     bot.send_chat_action(message.chat.id, 'typing')
+ 
+@@ -382,12 +452,95 @@ def api_status_command(message):
+ @bot.message_handler(func=lambda message: True)
+ def handle_other_messages(message):
+     """Handle non-command messages"""
++    if not _is_allowed(message):
++        return _deny(message)
+     bot.reply_to(message,
+                  "💡 *Tip:* Use /help to see available commands\n\n"
+                  "To verify a claim, use:\n"
+                  "/verify [your claim here]",
+                  parse_mode='Markdown')
+ 
++
++def _format_pending_approvals(pending: list) -> str:
++    if not pending:
++        return "✅ No pending approvals."
++    lines = ["🧾 *Pending Approvals* (oldest first)\n"]
++    for item in pending[:10]:
++        rid = item.get("request_id", "")
++        risk = item.get("risk_level", "")
++        worker_id = item.get("worker_id", "")
++        task_name = item.get("task_name", "")
++        created = item.get("created_at", "")
++        short_id = rid.split("-")[0] if rid else ""
++        lines.append(f"- *{short_id}* | {risk} | worker={worker_id} | {task_name} | {created}")
++    lines.append("\nUse `/approve <id>` or `/reject <id>` (full UUID or short prefix).")
++    return "\n".join(lines)
++
++
++def _resolve_request_id(prefix: str) -> str:
++    # Allow short prefix: match against current pending list first
++    pref = (prefix or "").strip().lower()
++    if not pref:
++        return ""
++    pending = api_client.list_pending_approvals(limit=50)
++    if pending.get("success"):
++        for item in pending.get("pending", []):
++            rid = (item.get("request_id") or "").lower()
++            if rid.startswith(pref):
++                return item.get("request_id") or prefix
++    return prefix
++
++
++@bot.message_handler(commands=["pending"])
++def pending_command(message):
++    """Phase 4: show pending approval queue."""
++    if not _is_allowed(message):
++        return _deny(message)
++    bot.send_chat_action(message.chat.id, 'typing')
++    res = api_client.list_pending_approvals(limit=20)
++    if not res.get("success", True):
++        return bot.reply_to(message, f"⚠️ Error: {res.get('error','Unknown error')}")
++    text = _format_pending_approvals(res.get("pending", []))
++    bot.reply_to(message, text, parse_mode="Markdown")
++
++
++@bot.message_handler(commands=["approve"])
++def approve_command(message):
++    """Phase 4: approve a request id."""
++    if not _is_allowed(message):
++        return _deny(message)
++    parts = message.text.split(maxsplit=2)
++    if len(parts) < 2:
++        return bot.reply_to(message, "Usage: /approve <id> [note]")
++    rid = _resolve_request_id(parts[1])
++    note = parts[2] if len(parts) >= 3 else ""
++    decided_by = f"{getattr(message.from_user, 'username', '') or ''}({message.from_user.id})"
++    bot.send_chat_action(message.chat.id, 'typing')
++    res = api_client.approve(rid, decided_by=decided_by, note=note)
++    if not res.get("success", True):
++        return bot.reply_to(message, f"⚠️ Error: {res.get('error','Unknown error')}")
++    approval = res.get("approval", {})
++    bot.reply_to(message, f"✅ Approved `{approval.get('request_id','')}`", parse_mode="Markdown")
++
++
++@bot.message_handler(commands=["reject"])
++def reject_command(message):
++    """Phase 4: reject a request id."""
++    if not _is_allowed(message):
++        return _deny(message)
++    parts = message.text.split(maxsplit=2)
++    if len(parts) < 2:
++        return bot.reply_to(message, "Usage: /reject <id> [note]")
++    rid = _resolve_request_id(parts[1])
++    note = parts[2] if len(parts) >= 3 else ""
++    decided_by = f"{getattr(message.from_user, 'username', '') or ''}({message.from_user.id})"
++    bot.send_chat_action(message.chat.id, 'typing')
++    res = api_client.reject(rid, decided_by=decided_by, note=note)
++    if not res.get("success", True):
++        return bot.reply_to(message, f"⚠️ Error: {res.get('error','Unknown error')}")
++    approval = res.get("approval", {})
++    bot.reply_to(message, f"🛑 Rejected `{approval.get('request_id','')}`", parse_mode="Markdown")
++
+ def main():
+     """Main function to run the bot"""
+     logger.info("Starting Wingman Telegram Bot (API Integration)...")
+@@ -406,6 +559,10 @@ def main():
+     else:
+         logger.info("Bot accepting messages from all users")
+ 
++    # Check for chat restriction
++    if config.get("chat_id"):
++        logger.info(f"Bot restricted to chat_id: {config['chat_id']}")
++
+     # Start polling
+     try:
+         logger.info("Bot is polling for messages...")
+diff --git a/wingman/approval_store.py b/wingman/approval_store.py
+new file mode 100755
+index 00000000..6123030d
+--- /dev/null
++++ b/wingman/approval_store.py
+@@ -0,0 +1,169 @@
++#!/usr/bin/env python3
++"""
++Phase 4 (HITL): Approval Store
++
++SQLite-backed queue for human approval decisions.
++Designed to be usable in DEV/TEST/PRD without additional dependencies.
++"""
++
++from __future__ import annotations
++
++import os
++import sqlite3
++import uuid
++from dataclasses import dataclass, asdict
++from datetime import datetime, timezone
++from pathlib import Path
++from typing import Any, Dict, List, Optional
++
++
++def _utc_now_iso() -> str:
++    return datetime.now(timezone.utc).isoformat()
++
++
++def _ensure_parent_dir(db_path: str) -> None:
++    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
++
++
++@dataclass(frozen=True)
++class ApprovalRequest:
++    request_id: str
++    created_at: str
++    status: str  # PENDING|APPROVED|REJECTED|AUTO_APPROVED|EXPIRED
++    worker_id: str
++    task_name: str
++    instruction: str
++    risk_level: str  # LOW|MEDIUM|HIGH
++    risk_reason: str
++    decided_at: Optional[str] = None
++    decided_by: Optional[str] = None
++    decision_note: Optional[str] = None
++
++    def to_dict(self) -> Dict[str, Any]:
++        return asdict(self)
++
++
++class ApprovalStore:
++    def __init__(self, db_path: str):
++        self.db_path = db_path
++        _ensure_parent_dir(self.db_path)
++        self._init_db()
++
++    def _connect(self) -> sqlite3.Connection:
++        conn = sqlite3.connect(self.db_path, timeout=10, isolation_level=None)
++        conn.row_factory = sqlite3.Row
++        return conn
++
++    def _init_db(self) -> None:
++        with self._connect() as conn:
++            conn.execute(
++                """
++                CREATE TABLE IF NOT EXISTS approvals (
++                    request_id TEXT PRIMARY KEY,
++                    created_at TEXT NOT NULL,
++                    status TEXT NOT NULL,
++                    worker_id TEXT NOT NULL,
++                    task_name TEXT NOT NULL,
++                    instruction TEXT NOT NULL,
++                    risk_level TEXT NOT NULL,
++                    risk_reason TEXT NOT NULL,
++                    decided_at TEXT,
++                    decided_by TEXT,
++                    decision_note TEXT
++                )
++                """
++            )
++            conn.execute("CREATE INDEX IF NOT EXISTS idx_approvals_status_created ON approvals(status, created_at)")
++
++    def create_request(
++        self,
++        *,
++        worker_id: str,
++        task_name: str,
++        instruction: str,
++        risk_level: str,
++        risk_reason: str,
++        status: str = "PENDING",
++    ) -> ApprovalRequest:
++        req = ApprovalRequest(
++            request_id=str(uuid.uuid4()),
++            created_at=_utc_now_iso(),
++            status=status,
++            worker_id=str(worker_id),
++            task_name=task_name or "",
++            instruction=instruction or "",
++            risk_level=risk_level,
++            risk_reason=risk_reason,
++        )
++        with self._connect() as conn:
++            conn.execute(
++                """
++                INSERT INTO approvals (
++                    request_id, created_at, status, worker_id, task_name, instruction,
++                    risk_level, risk_reason, decided_at, decided_by, decision_note
++                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
++                """,
++                (
++                    req.request_id,
++                    req.created_at,
++                    req.status,
++                    req.worker_id,
++                    req.task_name,
++                    req.instruction,
++                    req.risk_level,
++                    req.risk_reason,
++                    req.decided_at,
++                    req.decided_by,
++                    req.decision_note,
++                ),
++            )
++        return req
++
++    def get(self, request_id: str) -> Optional[ApprovalRequest]:
++        with self._connect() as conn:
++            row = conn.execute("SELECT * FROM approvals WHERE request_id = ?", (request_id,)).fetchone()
++            if not row:
++                return None
++            return ApprovalRequest(**dict(row))
++
++    def list_pending(self, limit: int = 20) -> List[ApprovalRequest]:
++        with self._connect() as conn:
++            rows = conn.execute(
++                "SELECT * FROM approvals WHERE status = 'PENDING' ORDER BY created_at ASC LIMIT ?",
++                (int(limit),),
++            ).fetchall()
++            return [ApprovalRequest(**dict(r)) for r in rows]
++
++    def decide(
++        self,
++        request_id: str,
++        *,
++        decision: str,  # APPROVED|REJECTED
++        decided_by: Optional[str] = None,
++        decision_note: Optional[str] = None,
++    ) -> Optional[ApprovalRequest]:
++        decided_at = _utc_now_iso()
++        with self._connect() as conn:
++            row = conn.execute("SELECT * FROM approvals WHERE request_id = ?", (request_id,)).fetchone()
++            if not row:
++                return None
++            current = dict(row)
++            if current.get("status") != "PENDING":
++                # Idempotent: return current state if already decided
++                return ApprovalRequest(**current)
++            conn.execute(
++                """
++                UPDATE approvals
++                SET status = ?, decided_at = ?, decided_by = ?, decision_note = ?
++                WHERE request_id = ?
++                """,
++                (decision, decided_at, decided_by, decision_note, request_id),
++            )
++        return self.get(request_id)
++
++
++def default_store() -> ApprovalStore:
++    db_path = os.getenv("WINGMAN_APPROVAL_DB", os.path.join(os.path.dirname(__file__), "data", "approvals.db"))
++    return ApprovalStore(db_path=db_path)
++
++

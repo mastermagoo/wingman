@@ -10,9 +10,9 @@ import os
 from datetime import datetime
 
 # In Docker environments, we connect via the service name or localhost mapping
-API_URL = os.getenv("WINGMAN_API_URL", "http://localhost:8001")
+API_URL = os.getenv("WINGMAN_API_URL", "http://localhost:8101")
 
-def process_audit_log(log_path="claims_audit.jsonl"):
+def process_audit_log(log_path="data/claims_audit.jsonl"):
     if not os.path.exists(log_path):
         print(f"❌ Error: {log_path} not found")
         return

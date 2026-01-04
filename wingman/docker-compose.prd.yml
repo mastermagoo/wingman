@@ -1,119 +1,254 @@
+name: wingman-prd
 version: '3.8'
 
-name: wingman_prd
+# Production environment configuration
+# Environment: PRD
+# Purpose: Production Wingman deployment
+# Generated: 2025-12-16
 
 services:
-  # Wingman API Service (PRD)
+  # Wingman API Service - Production
   wingman-api:
     build:
       context: .
       dockerfile: Dockerfile.api
-    container_name: wingman-api-prd
+    container_name: wingman-prd-api
     environment:
-      # Flask / API
       - FLASK_ENV=${FLASK_ENV:-production}
-      # Wingman 2.0 verifier listens on a fixed internal port in the container
-      - WINGMAN_PORT=5000
-      # Environment tag for logs and Telegram
-      - WINGMAN_ENV=PRD
-      # Database config for intel_integration.IntelDatabase (Timescale/Postgres)
-      - TIMESCALE_HOST=postgres
-      - TIMESCALE_PORT=5432
+      - API_PORT=${API_PORT:-5000}
+      - DB_HOST=${DB_HOST:-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-wingman_prd}
+      - DB_USER=${DB_USER:-wingman_prd}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
+      - TIMESCALE_HOST=${TIMESCALE_HOST:-postgres}
+      - TIMESCALE_PORT=${TIMESCALE_PORT:-5432}
       - TIMESCALE_DB=${DB_NAME:-wingman_prd}
       - TIMESCALE_USER=${DB_USER:-wingman_prd}
-      - TIMESCALE_PASS=${DB_PASSWORD:-wingman_prd_secure_pass}
-      # Enhanced verifier (Ollama)
-      - OLLAMA_HOST=ollama
-      - OLLAMA_PORT=11434
+      - TIMESCALE_PASS=${DB_PASSWORD:?DB_PASSWORD is required}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - OLLAMA_HOST=${OLLAMA_HOST:-host.docker.internal}
+      - OLLAMA_PORT=${OLLAMA_PORT:-11434}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DEPLOYMENT_ENV=prd
+      - WINGMAN_APPROVAL_DB=${WINGMAN_APPROVAL_DB:-data/approvals.db}
+      # Phase 4 (HITL) auth: prefer role-separated keys; legacy key still supported.
+      - WINGMAN_APPROVAL_READ_KEYS=${WINGMAN_APPROVAL_READ_KEYS:-}
+      - WINGMAN_APPROVAL_DECIDE_KEYS=${WINGMAN_APPROVAL_DECIDE_KEYS:-}
+      - WINGMAN_APPROVAL_REQUEST_KEYS=${WINGMAN_APPROVAL_REQUEST_KEYS:-}
+      - WINGMAN_APPROVAL_API_KEY=${WINGMAN_APPROVAL_API_KEY:-}
     ports:
-      - "9101:5000"
+      - "127.0.0.1:${API_PORT:-5000}:8001"
     depends_on:
-      - postgres
-      - ollama
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
-      - wingman-prd-network
+      - wingman-network-prd
     volumes:
-      - ./logs:/app/logs
-      - ./data:/app/data
-      # Mount intel-system so Wingman can verify real files in PRD
-      - /Volumes/Data/ai_projects/intel-system:/Volumes/Data/ai_projects/intel-system:ro
+      - ./logs/prd:/app/logs
+      - ./data/prd:/app/data
     restart: unless-stopped
+    labels:
+      - "com.intel-system.compose-file=docker-compose.prd.yml"
+      - "com.intel-system.environment=production"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
-  # Telegram Bot Service (PRD) - uses same bot, tagged with WINGMAN_ENV=PRD
+  # Wingman Watcher - Phase 4: Autonomous Monitoring
+  wingman-watcher:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: wingman-prd-watcher
+    command: ["python", "-u", "wingman_watcher.py"]
+    environment:
+      - WINGMAN_AUDIT_LOG=${WINGMAN_AUDIT_LOG:-data/claims_audit.jsonl}
+      - WINGMAN_WATCHER_STATE=${WINGMAN_WATCHER_STATE:-data/watcher_state.json}
+      - WINGMAN_WATCHER_INCIDENTS=${WINGMAN_WATCHER_INCIDENTS:-data/incidents.jsonl}
+      - WINGMAN_WATCHER_INTERVAL_SEC=${WINGMAN_WATCHER_INTERVAL_SEC:-2.0}
+      - WINGMAN_WATCHER_DEDUP_SEC=${WINGMAN_WATCHER_DEDUP_SEC:-600}
+      - WINGMAN_NOTIFY_BACKENDS=${WINGMAN_NOTIFY_BACKENDS:-stdout,telegram}
+      - WINGMAN_WEBHOOK_URL=${WINGMAN_WEBHOOK_URL:-}
+      - TELEGRAM_BOT_TOKEN=${BOT_TOKEN:?BOT_TOKEN is required}
+      - TELEGRAM_CHAT_ID=${CHAT_ID:?CHAT_ID is required}
+      - WINGMAN_REMEDIATE_MODE=${WINGMAN_REMEDIATE_MODE:-disabled}
+      - WINGMAN_REMEDIATE_CMD=${WINGMAN_REMEDIATE_CMD:-}
+      - DEPLOYMENT_ENV=prd
+    depends_on:
+      - wingman-api
+    networks:
+      - wingman-network-prd
+    volumes:
+      - ./logs/prd:/app/logs
+      - ./data/prd:/app/data
+    restart: unless-stopped
+    # Watcher is not an HTTP server; disable the inherited Dockerfile healthcheck.
+    healthcheck:
+      disable: true
+    labels:
+      - "com.intel-system.compose-file=docker-compose.prd.yml"
+      - "com.intel-system.environment=production"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Telegram Bot Service - Production
   telegram-bot:
     build:
       context: .
       dockerfile: Dockerfile.bot
-    container_name: wingman-telegram-prd
+    container_name: wingman-prd-telegram
     environment:
-      - BOT_TOKEN=${BOT_TOKEN}
-      - CHAT_ID=${CHAT_ID}
-      - API_URL=http://wingman-api:5000
-      - WINGMAN_ENV=PRD
-      - DB_HOST=postgres
-      - DB_PORT=5432
+      - BOT_TOKEN=${BOT_TOKEN:?BOT_TOKEN is required}
+      - CHAT_ID=${CHAT_ID:?CHAT_ID is required}
+      # Use container_name hostname to avoid Docker DNS alias quirks in PRD.
+      - API_URL=${API_URL:-http://wingman-prd-api:8001}
+      # Bot should only receive minimal keys required to read and decide.
+      - WINGMAN_APPROVAL_READ_KEY=${WINGMAN_APPROVAL_READ_KEY:-}
+      - WINGMAN_APPROVAL_DECIDE_KEY=${WINGMAN_APPROVAL_DECIDE_KEY:-}
+      - WINGMAN_APPROVAL_API_KEY=${WINGMAN_APPROVAL_API_KEY:-}
+      - DB_HOST=${DB_HOST:-postgres}
+      - DB_PORT=${DB_PORT:-5432}
       - DB_NAME=${DB_NAME:-wingman_prd}
       - DB_USER=${DB_USER:-wingman_prd}
-      - DB_PASSWORD=${DB_PASSWORD:-wingman_prd_secure_pass}
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
+      - TIMESCALE_HOST=${TIMESCALE_HOST:-postgres}
+      - TIMESCALE_PORT=${TIMESCALE_PORT:-5432}
+      - TIMESCALE_DB=${DB_NAME:-wingman_prd}
+      - TIMESCALE_USER=${DB_USER:-wingman_prd}
+      - TIMESCALE_PASS=${DB_PASSWORD:?DB_PASSWORD is required}
+      - DEPLOYMENT_ENV=prd
     depends_on:
       - wingman-api
       - postgres
     networks:
-      - wingman-prd-network
+      - wingman-network-prd
     volumes:
-      - ./logs:/app/logs
-      - ./bot_config.json:/app/bot_config.json:ro
+      - ./logs/prd:/app/logs
     restart: unless-stopped
+    labels:
+      - "com.intel-system.compose-file=docker-compose.prd.yml"
+      - "com.intel-system.environment=production"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
 
-  # PostgreSQL with TimescaleDB (PRD)
+  # PostgreSQL with TimescaleDB - Production
   postgres:
     image: timescale/timescaledb:latest-pg15
-    container_name: wingman-postgres-prd
+    container_name: wingman-prd-postgres
     environment:
       - POSTGRES_USER=${DB_USER:-wingman_prd}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-wingman_prd_secure_pass}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
       - POSTGRES_DB=${DB_NAME:-wingman_prd}
-      - POSTGRES_HOST_AUTH_METHOD=md5
+      - POSTGRES_HOST_AUTH_METHOD=${POSTGRES_HOST_AUTH_METHOD:-md5}
+      - DEPLOYMENT_ENV=prd
     ports:
-      - "55433:5432"
+      - "127.0.0.1:${DB_PORT:-5434}:5432"
     volumes:
-      - postgres_prd_data:/var/lib/postgresql/data
+      - postgres_data_prd:/var/lib/postgresql/data
       - ./database_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     networks:
-      - wingman-prd-network
+      - wingman-network-prd
     restart: unless-stopped
+    labels:
+      - "com.intel-system.compose-file=docker-compose.prd.yml"
+      - "com.intel-system.environment=production"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-wingman_prd} -d ${DB_NAME:-wingman_prd}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Ollama for Mistral 7B (PRD)
-  ollama:
-    image: ollama/ollama:latest
-    container_name: wingman-ollama-prd
+  # Redis Cache - Production
+  redis:
+    image: redis:7-alpine
+    container_name: wingman-prd-redis
     ports:
-      - "11435:11434"
+      - "127.0.0.1:${REDIS_PORT:-6380}:6379"
     volumes:
-      - ollama_prd_data:/root/.ollama
+      - redis_data_prd:/data
     networks:
-      - wingman-prd-network
+      - wingman-network-prd
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 8G
+    labels:
+      - "com.intel-system.compose-file=docker-compose.prd.yml"
+      - "com.intel-system.environment=production"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Ollama for Mistral 7B - Production
+  # Note: Using host Ollama instance to avoid port conflicts
+  # If host Ollama is not available, uncomment the ollama service below
+  # and use a different port (e.g., 11435)
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: wingman-ollama-prd
+  #   ports:
+  #     - "127.0.0.1:11435:11434"
+  #   volumes:
+  #     - ollama_data_prd:/root/.ollama
+  #   networks:
+  #     - wingman-network-prd
+  #   restart: unless-stopped
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 8G
+  #   labels:
+  #     - "com.intel-system.compose-file=docker-compose.prd.yml"
+  #     - "com.intel-system.environment=production"
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #   logging:
+  #     driver: "json-file"
+  #     options:
+  #       max-size: "10m"
+  #       max-file: "3"
 
 networks:
-  wingman-prd-network:
+  wingman-network-prd:
     driver: bridge
-    name: wingman-prd-network
+    name: wingman-network-prd
 
 volumes:
-  postgres_prd_data:
+  postgres_data_prd:
     driver: local
-  ollama_prd_data:
+  redis_data_prd:
     driver: local
-
-
+  # ollama_data_prd:  # Commented out - using host Ollama
+  #   driver: local
 
