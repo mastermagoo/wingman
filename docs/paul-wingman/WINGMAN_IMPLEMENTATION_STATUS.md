@@ -28,8 +28,8 @@ Wingman is **LIVE and MONITORING** on Samsung 1TB SSD with complete Telegram int
    - Location: `/Volumes/Samsung1TB/paul-wingman/wingman_operational.py`
 
 3. **Telegram Integration** ✅
-   - Bot Token: `8272438703:AAHXnyrkdQ3s9r0QEGoentrTFxuaD5B5nSk`
-   - Chat ID: `7007859146`
+   - Bot Token: *(configured via `BOT_TOKEN` env var; never commit)*
+   - Chat ID: *(configured via `CHAT_ID` env var; never commit)*
    - Real-time alerts working
    - Command processing active
    - Location: `/Volumes/Samsung1TB/paul-wingman/wingman_telegram.py`

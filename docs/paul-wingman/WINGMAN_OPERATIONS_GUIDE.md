@@ -29,8 +29,8 @@ System Activity → Wingman Monitors → Verification → Telegram Alert to You
 ```
 
 ### Telegram Integration:
-- **Bot Token**: `8272438703:AAHXnyrkdQ3s9r0QEGoentrTFxuaD5B5nSk`
-- **Your Chat ID**: `7007859146`
+- **Bot Token**: *(set via `BOT_TOKEN`; never commit)*
+- **Your Chat ID**: *(set via `CHAT_ID`; never commit)*
 - **Parse Mode**: Markdown for formatted alerts
 
 ---

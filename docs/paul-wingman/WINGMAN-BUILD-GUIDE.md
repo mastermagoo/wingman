@@ -130,9 +130,9 @@ from datetime import datetime
 
 class WingmanTelegram:
     def __init__(self):
-        # Your Telegram credentials
-        self.bot_token = "8272438703:AAHXnyrkdQ3s9r0QEGoentrTFxuaD5B5nSk"
-        self.chat_id = "7007859146"
+        # Telegram credentials (NEVER hardcode / never commit)
+        self.bot_token = os.getenv("BOT_TOKEN", "")
+        self.chat_id = os.getenv("CHAT_ID", "")
         self.telegram_api = f"https://api.telegram.org/bot{self.bot_token}"
         
         # Monitoring settings

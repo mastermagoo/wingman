@@ -150,8 +150,8 @@ grep -r "mem0" /Volumes/Data/ai_projects/intel-system/wingman/*.py
 Hardware Layer (Portable SSD)
 ├── wingman_operational.py (Mistral 7B)
 ├── wingman_telegram.py (Bot control)
-├── Telegram Bot Token: 8272438703:AAHXnyrkdQ3s9r0QEGoentrTFxuaD5B5nSk
-├── Chat ID: 7007859146
+├── Telegram Bot Token: (configured via env; never commit)
+├── Chat ID: (configured via env; never commit)
 └── Ollama (Mistral 7B 4.4GB)
 ```
 

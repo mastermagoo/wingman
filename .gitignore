@@ -24,3 +24,10 @@ archive/
 secrets/
 credentials/
 wingman/bot_config.json
+
+# Local quarantine for OS/SMB placeholder files (never commit)
+_trash_quarantine/
+.Trash/
+
+# Allow the canonical Cursor workspace file to be tracked (opt-in)
+!wingman-system.code-workspace

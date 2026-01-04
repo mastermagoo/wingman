@@ -66,8 +66,8 @@ python3 wingman_telegram.py
    - LLM analysis via Mistral 7B
 
 2. **Telegram Integration** ✅
-   - Bot ready at token: 8272438703:AAHXnyrkdQ3s9r0QEGoentrTFxuaD5B5nSk
-   - Chat ID: 7007859146
+   - Bot token: (set via `BOT_TOKEN` env var; never commit)
+   - Chat ID: (set via `CHAT_ID` env var; never commit)
    - Commands working
 
 3. **Mistral 7B LLM** ✅
