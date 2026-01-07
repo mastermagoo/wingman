@@ -15,7 +15,8 @@ services:
     container_name: wingman-prd-api
     environment:
       - FLASK_ENV=${FLASK_ENV:-production}
-      - API_PORT=${API_PORT:-5000}
+      # PRD uses 5001 to avoid macOS AirPlay Receiver conflict on port 5000
+      - API_PORT=${API_PORT:-5001}
       - DB_HOST=${DB_HOST:-postgres}
       - DB_PORT=${DB_PORT:-5432}
       - DB_NAME=${DB_NAME:-wingman_prd}
@@ -39,7 +40,7 @@ services:
       - WINGMAN_APPROVAL_REQUEST_KEYS=${WINGMAN_APPROVAL_REQUEST_KEYS:-}
       - WINGMAN_APPROVAL_API_KEY=${WINGMAN_APPROVAL_API_KEY:-}
     ports:
-      - "127.0.0.1:${API_PORT:-5000}:8001"
+      - "127.0.0.1:${API_PORT:-5001}:8001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -54,8 +55,8 @@ services:
       - ./data/prd:/app/data
     restart: unless-stopped
     labels:
-      - "com.intel-system.compose-file=docker-compose.prd.yml"
-      - "com.intel-system.environment=production"
+      - "com.wingman.compose-file=docker-compose.prd.yml"
+      - "com.wingman.environment=production"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
       interval: 30s
@@ -99,8 +100,8 @@ services:
     healthcheck:
       disable: true
     labels:
-      - "com.intel-system.compose-file=docker-compose.prd.yml"
-      - "com.intel-system.environment=production"
+      - "com.wingman.compose-file=docker-compose.prd.yml"
+      - "com.wingman.environment=production"
     logging:
       driver: "json-file"
       options:
@@ -142,8 +143,8 @@ services:
       - ./logs/prd:/app/logs
     restart: unless-stopped
     labels:
-      - "com.intel-system.compose-file=docker-compose.prd.yml"
-      - "com.intel-system.environment=production"
+      - "com.wingman.compose-file=docker-compose.prd.yml"
+      - "com.wingman.environment=production"
     logging:
       driver: "json-file"
       options:
@@ -160,8 +161,10 @@ services:
       - POSTGRES_DB=${DB_NAME:-wingman_prd}
       - POSTGRES_HOST_AUTH_METHOD=${POSTGRES_HOST_AUTH_METHOD:-md5}
       - DEPLOYMENT_ENV=prd
+    # Do NOT reuse DB_PORT for host publishing; DB_PORT is the *internal* port (usually 5432).
+    # Use DB_HOST_PORT to avoid collisions with local Postgres/OrbStack.
     ports:
-      - "127.0.0.1:${DB_PORT:-5434}:5432"
+      - "127.0.0.1:${DB_HOST_PORT:-5434}:5432"
     volumes:
       - postgres_data_prd:/var/lib/postgresql/data
       - ./database_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
@@ -169,8 +172,8 @@ services:
       - wingman-network-prd
     restart: unless-stopped
     labels:
-      - "com.intel-system.compose-file=docker-compose.prd.yml"
-      - "com.intel-system.environment=production"
+      - "com.wingman.compose-file=docker-compose.prd.yml"
+      - "com.wingman.environment=production"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-wingman_prd} -d ${DB_NAME:-wingman_prd}"]
       interval: 10s
@@ -186,16 +189,18 @@ services:
   redis:
     image: redis:7-alpine
     container_name: wingman-prd-redis
+    # Do NOT reuse REDIS_PORT for host publishing; REDIS_PORT is the *internal* port (usually 6379).
+    # Use REDIS_HOST_PORT to avoid collisions with local Redis.
     ports:
-      - "127.0.0.1:${REDIS_PORT:-6380}:6379"
+      - "127.0.0.1:${REDIS_HOST_PORT:-6380}:6379"
     volumes:
       - redis_data_prd:/data
     networks:
       - wingman-network-prd
     restart: unless-stopped
     labels:
-      - "com.intel-system.compose-file=docker-compose.prd.yml"
-      - "com.intel-system.environment=production"
+      - "com.wingman.compose-file=docker-compose.prd.yml"
+      - "com.wingman.environment=production"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -226,10 +231,11 @@ services:
   #       limits:
   #         memory: 8G
   #   labels:
-  #     - "com.intel-system.compose-file=docker-compose.prd.yml"
-  #     - "com.intel-system.environment=production"
+  #     - "com.wingman.compose-file=docker-compose.prd.yml"
+  #     - "com.wingman.environment=production"
   #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+  #     # Note: ollama/ollama image does NOT include curl, use ollama CLI instead
+  #     test: ["CMD", "ollama", "list"]
   #     interval: 30s
   #     timeout: 10s
   #     retries: 3
