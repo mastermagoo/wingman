@@ -30,6 +30,11 @@ services:
       - REDIS_PORT=${REDIS_PORT:-6379}
       - OLLAMA_HOST=${OLLAMA_HOST:-host.docker.internal}
       - OLLAMA_PORT=${OLLAMA_PORT:-11434}
+      # mem0 Configuration (loaded from .env.prd)
+      - MEM0_API_URL=${MEM0_API_URL:-http://127.0.0.1:8889}
+      - MEM0_USER_ID=${MEM0_USER_ID:-wingman_system}
+      # OpenAI API Key (for AI workers - loaded from .env.prd)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - DEPLOYMENT_ENV=prd
       - WINGMAN_APPROVAL_DB=${WINGMAN_APPROVAL_DB:-data/approvals.db}

@@ -30,6 +30,11 @@ services:
       - REDIS_PORT=${REDIS_PORT:-6379}
       - OLLAMA_HOST=${OLLAMA_HOST:-ollama}
       - OLLAMA_PORT=${OLLAMA_PORT:-11434}
+      # mem0 Configuration (loaded from .env.test)
+      - MEM0_API_URL=${MEM0_API_URL:-http://127.0.0.1:18888}
+      - MEM0_USER_ID=${MEM0_USER_ID:-wingman_system}
+      # OpenAI API Key (for AI workers - loaded from .env.test)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       # Store sqlite approval DB in a writable path inside the container for TEST
       # (bind/named volumes often mount as root:root and break sqlite for non-root user).
       - WINGMAN_APPROVAL_DB=${WINGMAN_APPROVAL_DB:-/tmp/approvals.db}
