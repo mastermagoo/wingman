@@ -17,8 +17,8 @@ import time
 # Configuration for Mac Studio PRD Environment
 BASE_DIR = Path(__file__).parent
 API_URL = "http://localhost:5001"  # PRD Port (Moved from 5000 due to AirTunes conflict)
-# PRD Data path on Mac Studio
-PRD_DATA_DIR = "/Volumes/Data/ai_projects/intel-system/wingman/data/prd"
+# PRD data directory (standalone repo). Override with PRD_DATA_DIR if needed.
+PRD_DATA_DIR = os.getenv("PRD_DATA_DIR") or str(BASE_DIR / "data" / "prd")
 
 def wingman_contract_gate(label: str = "PRD") -> bool:
     """

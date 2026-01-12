@@ -29,6 +29,8 @@ try:
     from intel_integration import IntelDatabase
     from instruction_validator import InstructionValidator
     from approval_store import default_store as approval_default_store
+    from consensus_verifier import assess_risk_consensus
+    from capability_token import generate_token
 except ImportError as e:
     print(f"Error importing modules: {e}")
     sys.exit(1)
@@ -340,7 +342,11 @@ def approvals_request():
         if not instruction:
             return jsonify({"error": "Missing 'instruction' field"}), 400
 
-        risk = assess_risk(instruction, task_name=task_name, deployment_env=deployment_env)
+        use_consensus = (os.getenv("WINGMAN_CONSENSUS_ENABLED") or "").strip() == "1"
+        if use_consensus:
+            risk = assess_risk_consensus(instruction, task_name=task_name, deployment_env=deployment_env)
+        else:
+            risk = assess_risk(instruction, task_name=task_name, deployment_env=deployment_env)
         risk_level = risk["risk_level"]
         risk_reason = risk["risk_reason"]
 
@@ -465,21 +471,88 @@ def approvals_reject(request_id: str):
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/gateway/token", methods=["POST"]) 
+def gateway_token():
+    """Mint a one-time capability token for the Execution Gateway.
+
+    Security properties:
+    - Requires DECIDE key (same authority that can approve/reject)
+    - Requires approval_id to be APPROVED or AUTO_APPROVED
+    - Requires the exact command string to be present in the approved instruction text
+      (prevents minting tokens for commands Mark did not see/approve)
+
+    Body:
+      {
+        "approval_id": "uuid",
+        "command": "docker compose ps",
+        "environment": "test"  # optional; defaults to DEPLOYMENT_ENV
+      }
+    """
+    auth = _require_approval_decide()
+    if auth is not None:
+        return auth
+
+    data = request.get_json() or {}
+    approval_id = (data.get("approval_id") or "").strip()
+    command = (data.get("command") or "").strip()
+    env = (data.get("environment") or os.getenv("DEPLOYMENT_ENV", "test")).strip()
+
+    if not approval_id:
+        return jsonify({"error": "Missing approval_id"}), 400
+    if not command:
+        return jsonify({"error": "Missing command"}), 400
+
+    req = approval_store.get(approval_id)
+    if not req:
+        return jsonify({"error": "Approval not found"}), 404
+
+    if req.status not in ("APPROVED", "AUTO_APPROVED"):
+        return jsonify({"error": f"Approval not approved (status={req.status})"}), 403
+
+    # Enforce: command must be included in the approved instruction text
+    # (simple substring match; conservative)
+    instr = (req.instruction or "")
+    if command not in instr:
+        return jsonify({
+            "error": "Command not present in approved instruction text; include the exact command in the approval instruction.",
+        }), 403
+
+    try:
+        token = generate_token(
+            approval_id=approval_id,
+            worker_id="telegram-bot",
+            environment=env,
+            allowed_commands=[command],
+            ttl_minutes=int(os.getenv("GATEWAY_TOKEN_TTL_MIN", "60")),
+        )
+    except Exception as e:
+        # Fail closed; do not leak internals
+        return jsonify({"error": "Token minting failed"}), 500
+
+    return jsonify({"success": True, "token": token, "environment": env}), 200
+
+
 @app.route('/health', methods=['GET'])
 def health():
     """
     Health check endpoint
     """
-        return jsonify({
+    return jsonify(
+        {
             "status": "healthy",
-        "phase": "3",
+            "phase": "3",
             "verifiers": {
-            "simple": "available",
-            "enhanced": "available" if hasattr(enhanced_verifier, 'mistral_available') and enhanced_verifier.mistral_available else "unavailable"
+                "simple": "available",
+                "enhanced": (
+                    "available"
+                    if hasattr(enhanced_verifier, "mistral_available") and enhanced_verifier.mistral_available
+                    else "unavailable"
+                ),
             },
-        "database": "connected" if db and db_available else "memory",
-            "timestamp": datetime.now().isoformat()
-        }), 200
+            "database": "connected" if db and db_available else "memory",
+            "timestamp": datetime.now().isoformat(),
+        }
+    ), 200
 
 
 @app.route('/stats', methods=['GET'])

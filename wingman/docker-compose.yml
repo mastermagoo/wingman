@@ -6,26 +6,26 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
-    # Load TEST secrets/config (kept out of git via .gitignore / globalignore)
+    # Load TEST secrets/config (local-only). Secrets must NOT be hardcoded in compose; use .env.test (never committed).
     env_file:
       - .env.test
     environment:
       - FLASK_ENV=${FLASK_ENV:-development}
       - API_PORT=${API_PORT:-5000}
-      - DEPLOYMENT_ENV=${DEPLOYMENT_ENV:-dev}
+      - DEPLOYMENT_ENV=${DEPLOYMENT_ENV:-test}
+      - WINGMAN_CONSENSUS_ENABLED=${WINGMAN_CONSENSUS_ENABLED:-1}
+      - WINGMAN_CONSENSUS_OLLAMA_ENABLED=${WINGMAN_CONSENSUS_OLLAMA_ENABLED:-0}
       - DB_HOST=${DB_HOST:-postgres}
       - DB_PORT=${DB_PORT:-5432}
       - DB_NAME=${DB_NAME:-wingman}
       - DB_USER=${DB_USER:-wingman}
       # TEST: avoid hard failure during Compose interpolation (env_file is not used for interpolation).
-      - DB_PASSWORD=${DB_PASSWORD:-wingman_secure_pass}
       # Timescale/DB logging (intel_integration.py uses TIMESCALE_* env vars)
       - TIMESCALE_HOST=${TIMESCALE_HOST:-postgres}
       - TIMESCALE_PORT=${TIMESCALE_PORT:-5432}
       - TIMESCALE_DB=${TIMESCALE_DB:-wingman}
       - TIMESCALE_USER=${TIMESCALE_USER:-wingman}
       # TEST: avoid hard failure during Compose interpolation (env_file is not used for interpolation).
-      - TIMESCALE_PASS=${TIMESCALE_PASS:-wingman_secure_pass}
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - OLLAMA_HOST=${OLLAMA_HOST:-ollama}
@@ -37,7 +37,7 @@ services:
       # as env_file values would be replaced with empty strings from shell interpolation.
     ports:
       # Host port 5000 is commonly occupied on macOS (AirPlay/AirTunes). Default to 5002.
-      - "127.0.0.1:${API_PORT:-5002}:5000"
+      - "127.0.0.1:${WINGMAN_TEST_HOST_PORT:-8101}:5000"
     depends_on:
       - postgres
       - redis
@@ -63,6 +63,7 @@ services:
       - .env.test
     environment:
       - API_URL=${API_URL:-http://wingman-api:5000}
+      - GATEWAY_URL=${GATEWAY_URL:-http://execution-gateway:5001}
       # Bot approval keys loaded from env_file (.env.test) - do NOT override here
       # as env_file values would be replaced with empty strings from shell interpolation.
       - ALLOWED_USERS=${ALLOWED_USERS:-}
@@ -71,15 +72,13 @@ services:
       - DB_NAME=${DB_NAME:-wingman}
       - DB_USER=${DB_USER:-wingman}
       # TEST: avoid hard failure during Compose interpolation (env_file is not used for interpolation).
-      - DB_PASSWORD=${DB_PASSWORD:-wingman_secure_pass}
       # Timescale/DB logging (intel_integration.py uses TIMESCALE_* env vars)
       - TIMESCALE_HOST=${TIMESCALE_HOST:-postgres}
       - TIMESCALE_PORT=${TIMESCALE_PORT:-5432}
       - TIMESCALE_DB=${TIMESCALE_DB:-wingman}
       - TIMESCALE_USER=${TIMESCALE_USER:-wingman}
       # TEST: avoid hard failure during Compose interpolation (env_file is not used for interpolation).
-      - TIMESCALE_PASS=${TIMESCALE_PASS:-wingman_secure_pass}
-      - DEPLOYMENT_ENV=${DEPLOYMENT_ENV:-dev}
+      - DEPLOYMENT_ENV=${DEPLOYMENT_ENV:-test}
     depends_on:
       - wingman-api
       - postgres
@@ -88,13 +87,70 @@ services:
     # No host/bind volumes in TEST by default.
     restart: unless-stopped
 
+  # Wingman Watcher - Phase 4: Autonomous Monitoring + Approval Notifications
+  wingman-watcher:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: ["python", "-u", "wingman_watcher.py"]
+    env_file:
+      - .env.test
+    environment:
+      - WINGMAN_AUDIT_LOG=${WINGMAN_AUDIT_LOG:-data/claims_audit.jsonl}
+      - WINGMAN_WATCHER_STATE=${WINGMAN_WATCHER_STATE:-data/watcher_state.json}
+      - WINGMAN_WATCHER_INCIDENTS=${WINGMAN_WATCHER_INCIDENTS:-data/incidents.jsonl}
+      - WINGMAN_WATCHER_INTERVAL_SEC=${WINGMAN_WATCHER_INTERVAL_SEC:-2.0}
+      - WINGMAN_WATCHER_DEDUP_SEC=${WINGMAN_WATCHER_DEDUP_SEC:-600}
+      - WINGMAN_NOTIFY_BACKENDS=${WINGMAN_NOTIFY_BACKENDS:-stdout,telegram}
+      - WINGMAN_WEBHOOK_URL=${WINGMAN_WEBHOOK_URL:-}
+      # TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID loaded from env_file
+      # Approval queue monitoring (new feature)
+      - WINGMAN_API_URL=${WINGMAN_API_URL:-http://wingman-api:5000}
+      - WINGMAN_APPROVAL_CHECK_INTERVAL_SEC=${WINGMAN_APPROVAL_CHECK_INTERVAL_SEC:-30}
+      - WINGMAN_APPROVAL_NOTIFY_ENABLED=${WINGMAN_APPROVAL_NOTIFY_ENABLED:-true}
+      # WINGMAN_APPROVAL_READ_KEY loaded from env_file
+      - DEPLOYMENT_ENV=${DEPLOYMENT_ENV:-test}
+    depends_on:
+      - wingman-api
+    networks:
+      - wingman-network
+    restart: unless-stopped
+    # Watcher is not an HTTP server; disable the inherited Dockerfile healthcheck.
+    healthcheck:
+      disable: true
+
+
+  # Phase R0: Execution Gateway (TEST-only)
+  # The ONLY service with Docker socket access.
+  execution-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    env_file:
+      - .env.test
+    environment:
+      - ALLOWED_ENVIRONMENTS=${ALLOWED_ENVIRONMENTS:-test}
+      - GATEWAY_PORT=${GATEWAY_PORT:-5001}
+      - AUDIT_STORAGE=${AUDIT_STORAGE:-postgres}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - wingman-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # PostgreSQL with TimescaleDB
   postgres:
     image: timescale/timescaledb:latest-pg15
+    # Load TEST secrets/config (local-only). Ensure POSTGRES_PASSWORD is set in .env.test (never committed).
+    env_file:
+      - .env.test
     environment:
       - POSTGRES_USER=${DB_USER:-wingman}
-      # TEST: avoid hard failure during Compose interpolation (env_file is not used for interpolation).
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-wingman_secure_pass}
       - POSTGRES_DB=${DB_NAME:-wingman}
       - POSTGRES_HOST_AUTH_METHOD=${POSTGRES_HOST_AUTH_METHOD:-md5}
     # Do not publish Postgres port in TEST by default to avoid host port conflicts.

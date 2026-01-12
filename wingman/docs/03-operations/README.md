@@ -4,6 +4,77 @@
 
 ---
 
+## Wingman 5 (Phase 5) — Deployment Plan
+
+- **Secure deployment plan (Phase 5)**: [PHASE_5_SECURE_DEPLOYMENT.md](../99-archive/paul-wingman/PHASE_5_SECURE_DEPLOYMENT.md)
+
+---
+
+
+## Phase R0 (Execution Gateway) — TEST Workflow & Validation
+
+**Goal**: ensure privileged execution (Docker access) is **non-bypassable**: only the Execution Gateway can touch Docker; all other containers cannot.
+
+### What’s enforced (TEST)
+
+- **Only** `execution-gateway` mounts `/var/run/docker.sock`
+- Non-gateway containers must have:
+  - **no** `/var/run/docker.sock`
+  - **no** `DOCKER_HOST` env var
+  - **no** access to OrbStack socket paths (e.g. `/Users/kermit/.orbstack/run/docker.sock`)
+
+### How to validate (TEST)
+
+Run these from repo root (`/Volumes/Data/ai_projects/wingman-system`):
+
+```bash
+# 1) Bring up TEST
+docker compose -f wingman/docker-compose.yml -p wingman-test up -d --build
+
+# 2) Health
+curl -sS http://127.0.0.1:8101/health
+
+# 3) Privilege boundary proof (must PASS)
+./tools/verify_test_privilege_removal.sh
+```
+
+
+### Tests (local)
+
+If you need to run the gateway unit tests locally on macOS:
+
+```bash
+cd /Volumes/Data/ai_projects/wingman-system
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install --upgrade pip
+python3 -m pip install -r wingman/api_requirements.txt pytest
+python3 -m pytest -q wingman/tests/test_gateway.py
+```
+
+### If it fails (how to fix)
+
+- **FAIL: `<svc>` has DOCKER_HOST set**
+  - Fix: remove `DOCKER_HOST` from that service’s `environment:` in `wingman/docker-compose.yml` and rebuild TEST.
+- **FAIL: `<svc>` can see `/Users/kermit/.orbstack/.../docker.sock`**
+  - Fix: remove any bind-mount that exposes home directories into that container.
+- **FAIL: `<svc>` has `/var/run/docker.sock`**
+  - Fix: ensure only `execution-gateway` has the socket mount in `wingman/docker-compose.yml`.
+
+### Extra security measures currently in place
+
+- **Postgres execution audit (append-only)**: gateway writes to `execution_audit` table when `AUDIT_STORAGE=postgres` (TEST).
+- **Consensus risk (advisory)**: approvals use multi-source consensus when `WINGMAN_CONSENSUS_ENABLED=1` (TEST default).
+- **Allowlist hardening**: gateway blocks shell operators like `&&`, `|`, `;`, redirections, etc. (prevents injection).
+- **CI tests + coverage gate**: `.github/workflows/wingman-tests.yml` runs `pytest` + `--cov-fail-under=95`.
+
+- **GitHub Action gate**: `.github/workflows/secret-scan.yml` blocks committing `.env*` and common secret patterns (server-side).
+- **Local pre-commit**: `.githooks/pre-commit` runs repo secret scanning before commit (client-side; CI still enforces).
+- **Capability tokens**: short-lived JWTs (TEST) minted only for approved requests, then executed via the gateway.
+
+---
+
+
 ## Quick Reference
 
 ### Health Checks

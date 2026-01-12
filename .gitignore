@@ -1,33 +1,37 @@
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-*.so
-*.egg-info/
-
-# Virtual envs
-venv/
-.venv/
-env/
-ENV/
-
-# Editor / OS
-.vscode/
-.idea/
-*.code-workspace
-.DS_Store
-
-# Never track archives or secrets in this repo
-archive/
+# Secrets / env files (MUST NEVER BE COMMITTED)
+.env
+.env.*
 *.env
-.env*
-secrets/
-credentials/
-wingman/bot_config.json
+*.env.*
+*.un.env
+*.un.env.*
+*un.env*
 
-# Local quarantine for OS/SMB placeholder files (never commit)
-_trash_quarantine/
-.Trash/
+# OS / editor junk
+.DS_Store
+Thumbs.db
 
-# Allow the canonical Cursor workspace file to be tracked (opt-in)
-!wingman-system.code-workspace
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+
+# Runtime data (local)
+logs/
+data/
+
+# Backups
+*.backup.*
+*.bak
+
+# Local agent tooling
+.claude/
+
+# Cross-project contamination prevention
+# CRITICAL: Only wingman/ subdirectory should be committed
+# Block other project directories that might exist at root level
+migration_from_intel-system/
+tools/
+docs/
+*.code-workspace

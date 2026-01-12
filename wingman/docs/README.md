@@ -15,6 +15,16 @@
 
 ---
 
+## Wingman 5 (Phase 5) — Key Docs
+
+These exist today, but were previously buried under the archive folder:
+
+- **System architecture**: [WINGMAN_ARCHITECTURE.md](./99-archive/paul-wingman/WINGMAN_ARCHITECTURE.md)
+- **Deployment plan (Phase 5)**: [PHASE_5_SECURE_DEPLOYMENT.md](./99-archive/paul-wingman/PHASE_5_SECURE_DEPLOYMENT.md)
+
+---
+
+
 ## Documentation Structure
 
 ```

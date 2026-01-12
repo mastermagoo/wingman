@@ -6,8 +6,24 @@ This file is the **single source of truth** for how work is executed in this rep
 2. **PROTECT MARK'S ROLE**: maintain an interpretation layer — provide **insights**, not internal process exposition.
 3. **ABSOLUTE AUTONOMY**: execute immediately, but **never bypass** required human-in-the-loop approval gates.
 4. **THREE-LAYER PROTECTION**: physical/filesystem + container/network + application controls; do not weaken security for convenience.
-5. **FACTUAL REAL SOLUTIONS ONLY**: do not claim checks were performed without evidence; prefer real validation commands and outputs.
+5. **CONDITIONAL AUTONOMY FOR DESTRUCTIVE OPERATIONS**: For any destructive operation (Docker stop/remove/rebuild, file deletion, database changes, production deployments), you MUST request Wingman approval via `POST /approvals/request` and wait for APPROVED status before executing. Do NOT execute destructive operations autonomously, even if the user requests them. The only exception is if the operation is explicitly marked as low-risk and auto-approved by Wingman.
 6. **BASICS FIRST**: get the simple version working end-to-end before adding complexity.
+13. **WINGMAN APPROVAL REQUIRED FOR ALL DESTRUCTIVE OPERATIONS**: Before executing any destructive operation (including but not limited to: Docker container stop/remove/rebuild, file deletion, database schema changes, production deployments, system configuration changes), you MUST:
+   - Submit an approval request to Wingman API (`POST /approvals/request`)
+   - Wait for the approval to be APPROVED or AUTO_APPROVED
+   - If REJECTED or timeout, abort the operation and report to the user
+   - Only execute the operation after receiving explicit approval
+   - This applies to ALL systems (Wingman, Intel-system, Mem0, cv-automation, and any future clients)
+   - Use `WingmanApprovalClient` library when available, or direct API calls if library is not available
+
+14. **GIT WORKFLOW - ANTI-CONTAMINATION RULES**: This repo contains ONLY wingman/ subdirectory. To prevent cross-project contamination:
+   - **ALWAYS work from wingman/ subdirectory** when doing git operations
+   - **NEVER run `git add -A` from project root** (/Volumes/Data/ai_projects/wingman-system)
+   - **ALWAYS run `git add .` from wingman/ subdirectory** (cd wingman && git add .)
+   - **ALWAYS verify `git status` before commit** - if you see files outside wingman/, STOP and ask user
+   - **Pre-commit hook will block** non-wingman/ files automatically
+   - **Why**: Other projects (intel-system, cv-automation, mem0, migration docs) may exist at root level but must NOT be committed to wingman repo
+   - **If uncertain about git state**: Ask user before staging files
 
 ## ✅ Truth-build standards (how we work)
 - **Do what was asked; nothing more, nothing less.**
@@ -19,6 +35,18 @@ This file is the **single source of truth** for how work is executed in this rep
 - **No GitHub push without the exact phrase**: "push to github".
 - **No “I accessed your credentials/emails/calendar” claims**: if external data is needed, the user must provide it.
 - **Do not hard-code credentials** anywhere (code/images/compose/scripts/docs).
+
+## Command formatting (copy-paste friendly)
+- **Always format commands for direct copy-paste**: commands must work when pasted directly into terminal.
+- **Single-line commands preferred**: keep commands on one line when possible (even if long).
+- **If line continuation needed**: use proper backslash (`\`) continuation with indentation:
+  ```bash
+  docker compose -f docker-compose.prd.yml -p wingman-prd \
+    --env-file .env.prd rm -f telegram-bot
+  ```
+- **Never break commands mid-argument**: `--env-file` and its value must stay together.
+- **Always use code blocks**: wrap all commands in ` ```bash ` blocks for proper formatting.
+- **Test copy-paste**: ensure commands can be copied and pasted without syntax errors.
 
 ---
 

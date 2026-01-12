@@ -1,0 +1,37 @@
+# Dockerfile for Execution Gateway
+# Minimal Python container for privileged operation control
+
+FROM python:3.11-slim
+
+# Create non-root user (gateway will run as this user)
+RUN useradd -m -u 1000 gateway
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies
+RUN pip install --no-cache-dir \
+    Flask==3.0.0 \
+    PyJWT==2.8.0 \
+    flask-cors==4.0.0 \
+    psycopg2-binary==2.9.9
+
+# Copy gateway files
+COPY execution_gateway.py /app/
+COPY capability_token.py /app/
+
+# Create data directory for audit logs
+RUN mkdir -p /app/data && chown -R gateway:gateway /app
+
+# Switch to non-root user
+USER gateway
+
+# Expose gateway port
+EXPOSE 5002
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:5002/health')" || exit 1
+
+# Run gateway
+CMD ["python", "execution_gateway.py"]

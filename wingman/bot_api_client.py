@@ -33,6 +33,7 @@ class WingmanAPIClient:
         # Phase 4: Approval security headers (prefer role-separated keys)
         # - READ key: required for GET /approvals/pending and GET /approvals/<id> when enabled
         # - DECIDE key: required for POST /approvals/<id>/approve|reject when enabled
+        # - REQUEST key: required for POST /approvals/request when enabled
         # Back-compat: legacy key uses X-Wingman-Approval-Key
         self.approval_read_key = (os.getenv("WINGMAN_APPROVAL_READ_KEY") or "").strip()
         if self.approval_read_key:
@@ -41,6 +42,10 @@ class WingmanAPIClient:
         self.approval_decide_key = (os.getenv("WINGMAN_APPROVAL_DECIDE_KEY") or "").strip()
         if self.approval_decide_key:
             self.session.headers["X-Wingman-Approval-Decide-Key"] = self.approval_decide_key
+
+        self.approval_request_key = (os.getenv("WINGMAN_APPROVAL_REQUEST_KEY") or "").strip()
+        if self.approval_request_key:
+            self.session.headers["X-Wingman-Approval-Request-Key"] = self.approval_request_key
 
         self.approval_key = (os.getenv("WINGMAN_APPROVAL_API_KEY") or "").strip()
         if self.approval_key:
@@ -115,6 +120,43 @@ class WingmanAPIClient:
             return {"success": False, "error": f"API returned {resp.status_code}", "details": resp.text}
         except Exception as e:
             return {"success": False, "error": str(e)}
+
+    def mint_gateway_token(self, approval_id: str, command: str, environment: str = "") -> Dict:
+        """R0: Mint a one-time capability token for the execution gateway."""
+        try:
+            endpoint = f"{self.api_url}/gateway/token"
+            payload = {
+                "approval_id": approval_id,
+                "command": command,
+            }
+            if environment:
+                payload["environment"] = environment
+            resp = self.session.post(endpoint, json=payload, timeout=self.timeout)
+            if resp.status_code == 200:
+                return {"success": True, **resp.json()}
+            return {"success": False, "error": f"API returned {resp.status_code}", "details": resp.text}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def gateway_execute(self, token: str, approval_id: str, command: str, gateway_url: str) -> Dict:
+        """R0: Execute a command via the execution gateway using a capability token."""
+        try:
+            import requests
+
+            url = gateway_url.rstrip('/') + '/gateway/execute'
+            headers = {"X-Capability-Token": token}
+            payload = {"approval_id": approval_id, "command": command}
+            r = requests.post(url, headers=headers, json=payload, timeout=30)
+            # Gateway returns 200 even on command failure; use JSON body.
+            if r.status_code in (200, 401, 403, 400):
+                try:
+                    return {"success": True, "status_code": r.status_code, **r.json()}
+                except Exception:
+                    return {"success": False, "status_code": r.status_code, "error": "Non-JSON gateway response"}
+            return {"success": False, "status_code": r.status_code, "error": f"Gateway returned {r.status_code}"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
 
     def verify_claim(self, claim: str, use_enhanced: bool = False) -> Dict:
         """

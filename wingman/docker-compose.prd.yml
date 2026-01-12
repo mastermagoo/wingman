@@ -1,5 +1,4 @@
 name: wingman-prd
-version: '3.8'
 
 # Production environment configuration
 # Environment: PRD
@@ -39,6 +38,8 @@ services:
       - WINGMAN_APPROVAL_DECIDE_KEYS=${WINGMAN_APPROVAL_DECIDE_KEYS:-}
       - WINGMAN_APPROVAL_REQUEST_KEYS=${WINGMAN_APPROVAL_REQUEST_KEYS:-}
       - WINGMAN_APPROVAL_API_KEY=${WINGMAN_APPROVAL_API_KEY:-}
+      # Phase 5 (Execution Gateway) JWT secret for capability tokens
+      - GATEWAY_JWT_SECRET=${GATEWAY_JWT_SECRET:?GATEWAY_JWT_SECRET is required}
     ports:
       - "127.0.0.1:${API_PORT:-5001}:8001"
     depends_on:
@@ -88,6 +89,11 @@ services:
       - WINGMAN_REMEDIATE_MODE=${WINGMAN_REMEDIATE_MODE:-disabled}
       - WINGMAN_REMEDIATE_CMD=${WINGMAN_REMEDIATE_CMD:-}
       - DEPLOYMENT_ENV=prd
+      # Approval monitoring configuration
+      - WINGMAN_API_URL=http://wingman-api:8001
+      - WINGMAN_APPROVAL_READ_KEY=${WINGMAN_APPROVAL_READ_KEY:-}
+      - WINGMAN_APPROVAL_NOTIFY_ENABLED=${WINGMAN_APPROVAL_NOTIFY_ENABLED:-true}
+      - WINGMAN_APPROVAL_CHECK_INTERVAL_SEC=${WINGMAN_APPROVAL_CHECK_INTERVAL_SEC:-30}
     depends_on:
       - wingman-api
     networks:
@@ -150,7 +156,49 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
-
+  # Execution Gateway - Phase 5: Capability-Based Execution
+  execution-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    container_name: wingman-prd-gateway
+    environment:
+      - GATEWAY_JWT_SECRET=${GATEWAY_JWT_SECRET:?GATEWAY_JWT_SECRET is required}
+      - GATEWAY_PORT=5002
+      - AUDIT_STORAGE=postgres
+      - ALLOWED_ENVIRONMENTS=prd
+      # Database connection for audit logs
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${DB_NAME:-wingman_prd}
+      - POSTGRES_USER=${DB_USER:-wingman_prd}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
+      - DEPLOYMENT_ENV=prd
+    ports:
+      - "127.0.0.1:5002:5002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - wingman-network-prd
+    volumes:
+      - ./logs/prd:/app/logs
+      - ./data/prd:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    labels:
+      - "com.wingman.compose-file=docker-compose.prd.yml"
+      - "com.wingman.environment=production"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5002/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
   # PostgreSQL with TimescaleDB - Production
   postgres:
     image: timescale/timescaledb:latest-pg15

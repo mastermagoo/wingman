@@ -30,10 +30,12 @@ die() { error "$*"; exit 1; }
 # Parse arguments
 FORCE=false
 SKIP_VALIDATION=false
+SKIP_HITL=false
 for arg in "$@"; do
     case $arg in
         --force) FORCE=true ;;
         --skip-validation) SKIP_VALIDATION=true ;;
+        --skip-hitl) SKIP_HITL=true ;;
         *) warn "Unknown argument: $arg" ;;
     esac
 done
@@ -59,7 +61,7 @@ contract_check_api() {
 
     log "Contract gate (${label}): validating API contracts at ${base_url} (no secrets printed)..."
 
-    python3 - <<'PY'
+    python3 - "$label" "$base_url" <<'PY'
 import json, sys, urllib.request, urllib.error
 
 label = sys.argv[1]
@@ -117,7 +119,128 @@ for k in ("verdict", "verifier", "processing_time_ms", "timestamp"):
 assert j.get("verdict") in ("TRUE", "FALSE", "UNVERIFIABLE", "ERROR"), f"{label} /verify unexpected verdict={j.get('verdict')}"
 
 print(f"{label} contract gate: OK")
-PY "$label" "$base_url"
+PY
+}
+
+################################################################################
+# Shared: Stage-by-stage HITL approval gate (unavoidable for "build complete")
+################################################################################
+
+stage_instruction() {
+    local stage="$1"
+    cat <<EOF
+DELIVERABLES: Promote TEST → PRD stage executed: ${stage}
+SUCCESS_CRITERIA: Stage completes; PRD health+contract gates pass; Telegram bot stays authorized; no secrets printed
+BOUNDARIES: Do not print secrets; do not modify unrelated repos; localhost-bound ports only
+DEPENDENCIES: Wingman TEST API reachable; PRD .env.prd present; docker compose v2
+MITIGATION: If a stage fails, stop and surface logs; do not proceed
+TEST_PROCESS: contract gate (/health,/check,/verify); docker compose ps; PRD health+contract gate after deploy
+TEST_RESULTS_FORMAT: exit codes + concise status lines (no secret values)
+RESOURCE_REQUIREMENTS: moderate CPU/RAM; disk for volumes
+RISK_ASSESSMENT: High (production deployment stage: ${stage})
+QUALITY_METRICS: 100% gates pass; deterministic stage-by-stage human approval
+EOF
+}
+
+request_hitl_stage() {
+    local stage="$1"
+    local api_url="$2"
+
+    # If HITL is skipped, we still allow the script to run, but it must NEVER claim success.
+    if [[ "$SKIP_HITL" == true ]]; then
+        warn "HITL stage approval skipped for stage '${stage}' (--skip-hitl) — will NOT claim 'build complete'."
+        GATES_OK=false
+        return 0
+    fi
+
+    log "HITL gate: requesting human approval for stage '${stage}' via ${api_url} ..."
+
+    local instr
+    instr="$(stage_instruction "$stage")"
+
+    python3 - "$stage" "$api_url" "$instr" <<'PY'
+import json, os, sys, time, urllib.request, urllib.error
+
+stage = sys.argv[1]
+api = sys.argv[2].rstrip("/")
+instruction = sys.argv[3]
+
+def _headers(request=False, read=False):
+    h = {"Content-Type": "application/json", "Accept": "application/json"}
+    # Optional least-privilege headers. Do NOT print values.
+    if request:
+        v = (os.getenv("WINGMAN_APPROVAL_REQUEST_KEY") or "").strip()
+        if v:
+            h["X-Wingman-Approval-Request-Key"] = v
+    if read:
+        v = (os.getenv("WINGMAN_APPROVAL_READ_KEY") or "").strip()
+        if v:
+            h["X-Wingman-Approval-Read-Key"] = v
+    legacy = (os.getenv("WINGMAN_APPROVAL_API_KEY") or "").strip()
+    if legacy:
+        h["X-Wingman-Approval-Key"] = legacy
+    return h
+
+def _post(path, body, headers):
+    url = api + path
+    data = json.dumps(body).encode("utf-8")
+    req = urllib.request.Request(url=url, data=data, headers=headers, method="POST")
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        raw = resp.read().decode("utf-8", errors="replace")
+        return resp.status, raw
+
+def _get(path, headers):
+    url = api + path
+    req = urllib.request.Request(url=url, headers=headers, method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+            return resp.status, raw
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode("utf-8", errors="replace") if hasattr(e, "read") else ""
+        return e.code, raw
+
+st, raw = _post(
+    "/approvals/request",
+    {
+        "worker_id": "deploy_test_to_prd",
+        "task_name": f"PROMOTE TEST→PRD: {stage}",
+        "instruction": instruction,
+        "deployment_env": "prd",
+    },
+    _headers(request=True),
+)
+if st != 200:
+    raise SystemExit(f"HITL request failed: HTTP {st} body={raw[:200]!r}")
+
+j = json.loads(raw) if raw else {}
+if not j.get("needs_approval", False):
+    # Auto-approved (policy/risk); proceed.
+    raise SystemExit(0)
+
+req = j.get("request") or {}
+request_id = (req.get("request_id") or "").strip()
+if not request_id:
+    raise SystemExit("HITL response missing request_id")
+
+poll = float(os.getenv("WINGMAN_APPROVAL_POLL_SEC", "2.0"))
+timeout = float(os.getenv("WINGMAN_APPROVAL_TIMEOUT_SEC", "86400"))
+deadline = time.time() + timeout
+
+while time.time() < deadline:
+    time.sleep(poll)
+    st, raw = _get(f"/approvals/{request_id}", _headers(read=True))
+    if st != 200:
+        continue
+    cur = json.loads(raw) if raw else {}
+    status = cur.get("status", "")
+    if status == "APPROVED":
+        raise SystemExit(0)
+    if status == "REJECTED":
+        raise SystemExit(f"HITL rejected: request_id={request_id}")
+
+raise SystemExit(f"HITL timed out: request_id={request_id}")
+PY
 }
 
 ################################################################################
@@ -216,7 +339,7 @@ success ".env.prd validated"
 
 # Ensure Phase 4 approval keys exist (optional but recommended).
 # We generate keys only if missing, without printing them.
-if [[ -z "${WINGMAN_APPROVAL_READ_KEYS:-}" ]] || [[ -z "${WINGMAN_APPROVAL_DECIDE_KEYS:-}" ]] || [[ -z "${WINGMAN_APPROVAL_READ_KEY:-}" ]] || [[ -z "${WINGMAN_APPROVAL_DECIDE_KEY:-}" ]]; then
+if [[ -z "${WINGMAN_APPROVAL_READ_KEYS:-}" ]] || [[ -z "${WINGMAN_APPROVAL_DECIDE_KEYS:-}" ]] || [[ -z "${WINGMAN_APPROVAL_READ_KEY:-}" ]] || [[ -z "${WINGMAN_APPROVAL_DECIDE_KEY:-}" ]] || [[ -z "${WINGMAN_APPROVAL_REQUEST_KEYS:-}" ]] || [[ -z "${WINGMAN_APPROVAL_REQUEST_KEY:-}" ]]; then
     log "Ensuring Phase 4 approval keys exist in .env.prd (no secrets printed)..."
     python3 - <<'PY'
 import secrets
@@ -250,15 +373,19 @@ def ensure(key, value, comment=None):
 # Generate least-privilege keys:
 # - API gets READ_KEYS + DECIDE_KEYS (lists)
 # - Bot gets READ_KEY + DECIDE_KEY (single)
+# - Script/orchestrators get REQUEST_KEYS + REQUEST_KEY (request-only)
 bot_read = secrets.token_urlsafe(32)
 orch_read = secrets.token_urlsafe(32)
 bot_decide = secrets.token_urlsafe(32)
 orch_decide = secrets.token_urlsafe(32)
+orch_request = secrets.token_urlsafe(32)
 
 ensure("WINGMAN_APPROVAL_READ_KEYS", f"{bot_read},{orch_read}", comment="\n# Phase 4 (HITL) approval protection (role-separated)")
 ensure("WINGMAN_APPROVAL_DECIDE_KEYS", f"{bot_decide},{orch_decide}")
 ensure("WINGMAN_APPROVAL_READ_KEY", bot_read)
 ensure("WINGMAN_APPROVAL_DECIDE_KEY", bot_decide)
+ensure("WINGMAN_APPROVAL_REQUEST_KEYS", orch_request, comment="\n# Optional: allow a client/script to call POST /approvals/request when request keys are enabled")
+ensure("WINGMAN_APPROVAL_REQUEST_KEY", orch_request)
 ensure("WINGMAN_APPROVAL_PENDING_TTL_SEC", "86400")
 
 if changed:
@@ -266,6 +393,25 @@ if changed:
 PY
     success "Phase 4 approval keys ensured in .env.prd"
 fi
+
+# PRD approvals must go through PRD Wingman (separation from TEST).
+# We do NOT fall back to TEST for approvals.
+PRD_API_PORT_EFFECTIVE="${API_PORT:-5000}"
+PRD_API_URL="http://127.0.0.1:${PRD_API_PORT_EFFECTIVE}"
+
+require_prd_gatekeeper() {
+    if [[ "$SKIP_HITL" == true ]]; then
+        return 0
+    fi
+    if curl -f -s "${PRD_API_URL}/health" >/dev/null 2>&1; then
+        return 0
+    fi
+    die "PRD Wingman gatekeeper not reachable at ${PRD_API_URL}. Start PRD Wingman first (e.g. 'docker compose -f docker-compose.prd.yml --env-file .env.prd up -d --build wingman-api postgres redis') then rerun."
+}
+
+# HITL stage approvals (PRD-only): pre-flight (before touching PRD)
+require_prd_gatekeeper
+request_hitl_stage "A-preflight" "$PRD_API_URL"
 
 ################################################################################
 # Phase 2: Stop Existing PRD (if any)
@@ -276,6 +422,10 @@ log "=== Phase 2: Stop Existing PRD ==="
 PRD_CONTAINERS=$(docker ps -a --filter "name=wingman.*-prd" --format "{{.Names}}")
 
 if [[ -n "$PRD_CONTAINERS" ]]; then
+    # HITL stage approval: before stopping/removing PRD containers
+    require_prd_gatekeeper
+    request_hitl_stage "B-stop-prd" "$PRD_API_URL"
+
     log "Found existing PRD containers:"
     echo "$PRD_CONTAINERS" | while read -r container; do
         log "  - $container"
@@ -286,15 +436,8 @@ if [[ -n "$PRD_CONTAINERS" ]]; then
         docker ps -a --filter "name=wingman.*-prd" -q | xargs -r docker rm -f
         success "Removed existing PRD containers"
     else
-        warn "Existing PRD containers found. Use --force to remove them."
-        read -p "Remove existing PRD containers? (y/N): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            docker ps -a --filter "name=wingman.*-prd" -q | xargs -r docker rm -f
-            success "Removed existing PRD containers"
-        else
-            die "Aborted. Remove PRD containers manually or use --force"
-        fi
+        warn "Existing PRD containers found. Refusing to remove without --force (non-interactive safety)."
+        die "Rerun with --force to remove existing PRD containers."
     fi
 else
     success "No existing PRD containers found"
@@ -317,6 +460,10 @@ success "Created data directories: logs/prd, data/prd"
 log "=== Phase 4: Deploy PRD Environment ==="
 
 cd "$SCRIPT_DIR"
+
+# HITL stage approval: before starting PRD containers
+require_prd_gatekeeper
+request_hitl_stage "C-deploy-prd" "$PRD_API_URL"
 
 log "Starting PRD containers..."
 # Force rebuild so PRD runs the exact code in this working tree (avoids stale images).
@@ -418,6 +565,10 @@ else
     warn "PRD API contract gate FAILED"
     GATES_OK=false
 fi
+
+# HITL stage approval: post-validation (before any "build complete" claim)
+require_prd_gatekeeper
+request_hitl_stage "D-post-validate" "$PRD_API_URL"
 
 # List all PRD containers
 log "PRD Container Status:"

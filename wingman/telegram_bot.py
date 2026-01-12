@@ -12,7 +12,7 @@ from pathlib import Path
 import re
 try:
     import telebot  # pyTelegramBotAPI
-from telebot import types
+    from telebot import types
     from telebot.apihelper import ApiTelegramException
 except ModuleNotFoundError as e:
     print("Error: Telegram dependency missing.")
@@ -418,6 +418,7 @@ I verify AI-generated claims by checking actual system state through the Wingman
 /pending - List pending approvals (Phase 4)
 /approve `<id>` `[note]` - Approve a request (Phase 4)
 /reject `<id>` `[note]` - Reject a request (Phase 4)
+/exec <approval_id> <command> - Execute approved command via gateway (TEST-only, Phase R0)
 /help - Show this message
 
 *Examples:*
@@ -785,6 +786,58 @@ def reject_command(message):
         return bot.reply_to(message, f"⚠️ Error: {res.get('error','Unknown error')}")
     approval = res.get("approval", {})
     bot.reply_to(message, f"🛑 Rejected {approval.get('request_id','')}")
+
+
+@bot.message_handler(commands=["exec"])
+def exec_command(message):
+    """TEST-only: execute an approved command via the Execution Gateway (R0)."""
+    if not _is_allowed(message):
+        return _deny(message)
+
+    # Safety: do not allow /exec in PRD bot runtime
+    dep_env = (os.getenv('DEPLOYMENT_ENV') or '').strip().lower()
+    if dep_env == 'prd':
+        return bot.reply_to(message, "⛔ /exec is disabled in PRD")
+
+    parts = message.text.split(maxsplit=2)
+    if len(parts) < 3:
+        return bot.reply_to(message, "Usage: /exec <approval_id> <command>")
+
+    approval_id = parts[1].strip()
+    command = parts[2].strip()
+
+    gateway_url = (os.getenv('GATEWAY_URL') or 'http://execution-gateway:5001').strip()
+
+    bot.send_chat_action(message.chat.id, 'typing')
+
+    # Mint token via API (requires decide key). Token is never printed to chat.
+    mint = api_client.mint_gateway_token(approval_id=approval_id, command=command, environment=(dep_env or 'test'))
+    if not mint.get('success'):
+        return bot.reply_to(message, f"⚠️ Token mint failed: {mint.get('error','unknown error')}")
+
+    token = mint.get('token')
+    if not token:
+        return bot.reply_to(message, "⚠️ Token mint failed: missing token")
+
+    # Execute via gateway
+    res = api_client.gateway_execute(token=token, approval_id=approval_id, command=command, gateway_url=gateway_url)
+    if not res.get('success'):
+        return bot.reply_to(message, f"⚠️ Gateway call failed: {res.get('error','unknown error')}")
+
+    exit_code = res.get('exit_code')
+    execution_id = res.get('execution_id', '')
+    output = (res.get('output') or '')
+    out_preview = output[:1200]
+
+    status_line = '✅ EXEC OK' if exit_code == 0 else '⚠️ EXEC FAILED'
+    msg = (
+        f"{status_line}\n\n"
+        f"- approval_id: {approval_id}\n"
+        f"- exit_code: {exit_code}\n"
+        f"- execution_id: {execution_id}\n\n"
+        f"Output (truncated):\n{out_preview}"
+    )
+    bot.reply_to(message, msg)
 
 def main():
     """Main function to run the bot"""

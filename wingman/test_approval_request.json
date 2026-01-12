@@ -1,0 +1,6 @@
+{
+  "worker_id": "manual-test-approval",
+  "task_name": "Test Manual Approval Flow",
+  "instruction": "DELIVERABLES: Test Docker container restart\nSUCCESS_CRITERIA: Container restarts successfully\nBOUNDARIES: Docker container management\nDEPENDENCIES: Docker daemon\nMITIGATION: Can restart if fails\nTEST_PROCESS: Test in staging first\nTEST_RESULTS_FORMAT: Container status\nRESOURCE_REQUIREMENTS: Minimal\nRISK_ASSESSMENT: Medium\nQUALITY_METRICS: Success\n\nCommand: docker restart wingman-prd-api",
+  "deployment_env": "prd"
+}

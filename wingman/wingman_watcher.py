@@ -7,6 +7,7 @@ Design goals:
 - Persistent cursor (resume after restart)
 - De-dupe / cooldown to prevent alert storms
 - Action hooks (notify-only by default; pluggable remediation later)
+- Proactive approval queue monitoring (notify when new approvals arrive)
 """
 
 import json
@@ -22,6 +23,12 @@ LOG_PATH = os.getenv("WINGMAN_AUDIT_LOG", "data/claims_audit.jsonl")
 STATE_PATH = os.getenv("WINGMAN_WATCHER_STATE", "data/watcher_state.json")
 INCIDENTS_PATH = os.getenv("WINGMAN_WATCHER_INCIDENTS", "data/incidents.jsonl")
 CHECK_INTERVAL = float(os.getenv("WINGMAN_WATCHER_INTERVAL_SEC", "2.0"))
+
+# Approval queue monitoring
+APPROVAL_API_URL = os.getenv("WINGMAN_API_URL", "http://wingman-api:5000")
+APPROVAL_READ_KEY = os.getenv("WINGMAN_APPROVAL_READ_KEY", "")
+APPROVAL_CHECK_INTERVAL = int(os.getenv("WINGMAN_APPROVAL_CHECK_INTERVAL_SEC", "30"))
+APPROVAL_NOTIFY_ENABLED = os.getenv("WINGMAN_APPROVAL_NOTIFY_ENABLED", "true").lower() in ("true", "1", "yes")
 
 # Notifications (env only; no secrets in code)
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -54,6 +61,114 @@ def _emit_incident(entry, verdict, severity):
         print(f"⚠️ Failed to write incident ledger: {e}")
     return incident
 
+
+# ---------------------------------------------------------------------------
+# Approval Queue Monitoring
+# ---------------------------------------------------------------------------
+
+def _fetch_pending_approvals():
+    """Fetch pending approvals from the API."""
+    try:
+        headers = {}
+        if APPROVAL_READ_KEY:
+            headers["X-Wingman-Approval-Read-Key"] = APPROVAL_READ_KEY
+        resp = requests.get(
+            f"{APPROVAL_API_URL}/approvals/pending",
+            headers=headers,
+            timeout=10,
+        )
+        if resp.status_code == 200:
+            return resp.json().get("pending", [])
+        else:
+            print(f"⚠️ Approval API returned {resp.status_code}")
+            return []
+    except Exception as e:
+        print(f"⚠️ Failed to fetch pending approvals: {e}")
+        return []
+
+
+def _format_approval_alert(approval):
+    """Format a pending approval for Telegram notification."""
+    req_id = approval.get("request_id", "unknown")[:8]
+    risk = approval.get("risk_level", "UNKNOWN")
+    worker = approval.get("worker_id", "unknown")
+    task = approval.get("task_name", "No task name")
+    created = approval.get("created_at", "")[:19] if approval.get("created_at") else ""
+    
+    emoji = "🔴" if risk == "HIGH" else "🟡" if risk == "MEDIUM" else "🟢"
+    
+    return (
+        f"{emoji} *NEW APPROVAL REQUEST*\n\n"
+        f"ID: `{req_id}`\n"
+        f"Risk: `{risk}`\n"
+        f"Worker: `{worker}`\n"
+        f"Task: {task}\n"
+        f"Created: {created}\n\n"
+        f"Reply with /pending to see all, or /approve {req_id} to approve."
+    )
+
+
+def _send_approval_notification(approval):
+    """Send Telegram notification for a new pending approval."""
+    if not TELEGRAM_TOKEN or not CHAT_ID:
+        print("⚠️ Approval notification skipped (missing TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID).")
+        return
+    
+    message = _format_approval_alert(approval)
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": message,
+        "parse_mode": "Markdown",
+        "disable_notification": False,  # Force push notifications
+    }
+    try:
+        resp = requests.post(url, json=payload, timeout=10)
+        if resp.status_code == 200:
+            result = resp.json()
+            if result.get('ok'):
+                msg_id = result.get('result', {}).get('message_id', 'unknown')
+                print(f"📨 Sent approval notification for {approval.get('request_id', 'unknown')[:8]} (msg_id: {msg_id})")
+            else:
+                print(f"⚠️ Telegram API error: {result.get('description', 'unknown')}")
+        else:
+            print(f"⚠️ Failed to send approval notification: {resp.status_code} - {resp.text}")
+    except Exception as e:
+        print(f"⚠️ Failed to send approval notification: {e}")
+
+
+def check_pending_approvals(state):
+    """
+    Check for new pending approvals and notify.
+    Returns updated state.
+    """
+    if not APPROVAL_NOTIFY_ENABLED:
+        return state
+    
+    notified_ids = set(state.get("notified_approval_ids", []))
+    pending = _fetch_pending_approvals()
+    
+    new_approvals = []
+    for approval in pending:
+        req_id = approval.get("request_id")
+        if req_id and req_id not in notified_ids:
+            new_approvals.append(approval)
+            notified_ids.add(req_id)
+    
+    # Notify for each new approval
+    for approval in new_approvals:
+        if "stdout" in NOTIFY_BACKENDS:
+            print(f"🔔 New pending approval: {approval.get('request_id', 'unknown')[:8]} ({approval.get('risk_level', 'UNKNOWN')})")
+        if "telegram" in NOTIFY_BACKENDS:
+            _send_approval_notification(approval)
+    
+    # Prune notified_ids to only keep IDs still in pending (avoid unbounded growth)
+    current_ids = {a.get("request_id") for a in pending if a.get("request_id")}
+    notified_ids = notified_ids & current_ids  # Keep only IDs still pending
+    
+    state["notified_approval_ids"] = list(notified_ids)
+    return state
+
 def send_telegram_alert(message):
     """Send immediate security alert to Mark"""
     if not TELEGRAM_TOKEN or not CHAT_ID:
@@ -63,7 +178,8 @@ def send_telegram_alert(message):
     payload = {
         "chat_id": CHAT_ID,
         "text": f"🚨 *WINGMAN SECURITY ALERT*\n\n{message}",
-        "parse_mode": "Markdown"
+        "parse_mode": "Markdown",
+        "disable_notification": False  # Force push notifications
     }
     try:
         requests.post(url, json=payload, timeout=10)
@@ -163,10 +279,22 @@ def _should_alert(state, entry):
 
 def watch_logs():
     print(f"👀 WINGMAN WATCHER: Monitoring {LOG_PATH} (state: {STATE_PATH})...")
+    if APPROVAL_NOTIFY_ENABLED:
+        print(f"📋 Approval notifications enabled (checking every {APPROVAL_CHECK_INTERVAL}s)")
     state = _load_state()
     last_pos = int(state.get("offset", 0) or 0)
+    last_approval_check = 0
 
     while True:
+        now = time.time()
+        
+        # Check pending approvals periodically
+        if APPROVAL_NOTIFY_ENABLED and (now - last_approval_check) >= APPROVAL_CHECK_INTERVAL:
+            state = check_pending_approvals(state)
+            last_approval_check = now
+            _save_state(state)
+        
+        # Check claims audit log
         if not os.path.exists(LOG_PATH):
             time.sleep(CHECK_INTERVAL)
             continue
