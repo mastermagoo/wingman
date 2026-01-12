@@ -36,3 +36,9 @@ data/
 /tools/
 /docs/
 *.code-workspace
+
+# AI Workers results (local only)
+wingman/ai-workers/results/*
+!wingman/ai-workers/results/README.md
+!wingman/ai-workers/results/meta-workers/
+!wingman/ai-workers/results/workers/
