@@ -25,6 +25,15 @@ This file is the **single source of truth** for how work is executed in this rep
    - **Why**: Other projects (intel-system, cv-automation, mem0, migration docs) may exist at root level but must NOT be committed to wingman repo
    - **If uncertain about git state**: Ask user before staging files
 
+15. **MEM0 NAMESPACE REQUIREMENT**: This repo has a dedicated mem0 namespace that MUST ALWAYS be used:
+   - **ALWAYS use user_id**: `wingman_system` for all mem0 operations
+   - **TEST environment**: `http://127.0.0.1:18888` (mem0_server_test)
+   - **PRD environment**: `http://127.0.0.1:8889` (mem0_server_prd)
+   - **Store worker retrospectives**: All AI worker executions must store retrospectives in mem0 (10-point framework point 9)
+   - **Store execution strategies**: All execution plans and monitoring data stored in mem0
+   - **Never use other namespaces**: intel-system, cv-automation have their own mem0 namespaces - do not cross-contaminate
+   - **API endpoint**: `POST http://127.0.0.1:18888/memories` with `user_id: "wingman_system"`
+
 ## ✅ Truth-build standards (how we work)
 - **Do what was asked; nothing more, nothing less.**
 - **Incremental**: small steps, each independently validated.
