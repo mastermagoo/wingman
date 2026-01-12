@@ -35,6 +35,7 @@ services:
       - WINGMAN_APPROVAL_DB=${WINGMAN_APPROVAL_DB:-/tmp/approvals.db}
       # Phase 4 (HITL) auth keys loaded from env_file (.env.test) - do NOT override here
       # as env_file values would be replaced with empty strings from shell interpolation.
+      # Phase 5 (Execution Gateway) JWT secret for capability tokens - loaded from .env.test
     ports:
       # Host port 5000 is commonly occupied on macOS (AirPlay/AirTunes). Default to 5002.
       - "127.0.0.1:${WINGMAN_TEST_HOST_PORT:-8101}:5000"
@@ -132,6 +133,16 @@ services:
       - ALLOWED_ENVIRONMENTS=${ALLOWED_ENVIRONMENTS:-test}
       - GATEWAY_PORT=${GATEWAY_PORT:-5001}
       - AUDIT_STORAGE=${AUDIT_STORAGE:-postgres}
+      # Database connection for audit logs
+      - POSTGRES_HOST=${DB_HOST:-postgres}
+      - POSTGRES_PORT=${DB_PORT:-5432}
+      - POSTGRES_DB=${DB_NAME:-wingman}
+      - POSTGRES_USER=${DB_USER:-wingman}
+      # POSTGRES_PASSWORD and GATEWAY_JWT_SECRET loaded from .env.test
+      - DEPLOYMENT_ENV=test
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
