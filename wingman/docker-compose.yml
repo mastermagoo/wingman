@@ -35,6 +35,8 @@ services:
       - MEM0_USER_ID=${MEM0_USER_ID:-wingman_system}
       # OpenAI API Key (for AI workers - loaded from .env.test)
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      # Anthropic API Key (for AI workers - loaded from .env.test)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       # Store sqlite approval DB in a writable path inside the container for TEST
       # (bind/named volumes often mount as root:root and break sqlite for non-root user).
       - WINGMAN_APPROVAL_DB=${WINGMAN_APPROVAL_DB:-/tmp/approvals.db}
