@@ -32,7 +32,7 @@ services:
       - OLLAMA_PORT=${OLLAMA_PORT:-11434}
       # mem0 Configuration (loaded from .env.prd)
       - MEM0_API_URL=${MEM0_API_URL:-http://127.0.0.1:8889}
-      - MEM0_USER_ID=${MEM0_USER_ID:-wingman_system}
+      - MEM0_USER_ID=${MEM0_USER_ID:-wingman}
       # OpenAI API Key (for AI workers - loaded from .env.prd)
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       # Anthropic API Key (for AI workers - loaded from .env.prd)
