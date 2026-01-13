@@ -193,13 +193,14 @@ ALL 225 workers must have:
 
 ---
 
-## API TIER CAPACITY
+## API TIER CAPACITY (COST OPTIMIZED)
 
-- **OpenAI**: 10,000 RPM → Using 135 workers (1.35%)
-- **Claude**: 4,000 RPM → Using 68 workers (1.7%)
+- **OpenAI**: 10,000 RPM → Using 203 workers (2.03%)
+- **Claude**: 4,000 RPM → Using 0 workers (0%) ← REMOVED due to high cost
 - **Ollama**: Unlimited → Using 22 workers (free)
 
-**Total capacity used**: 2.25% (well under limits)
+**Total capacity used**: 2.03% (well under limits)
+**Cost savings**: ~70% reduction by eliminating Claude API usage
 
 ---
 
