@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_183.py`
 - [ ] Regression test after code scanner change
 - [ ] Store baseline/results in fixtures/regression/
 - [ ] Test results file: `ai-workers/results/worker-183-results.json`

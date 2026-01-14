@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
 - [ ] Coherence scoring prompt template (flow, logic)
 - [ ] Test results file: `ai-workers/results/worker-009-results.json`
 

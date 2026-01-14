@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/tuning_config.py`
 - [ ] Analyze content quality validator inconsistencies
 - [ ] Identify sections with high variance
 - [ ] Test 3-5 prompt variations

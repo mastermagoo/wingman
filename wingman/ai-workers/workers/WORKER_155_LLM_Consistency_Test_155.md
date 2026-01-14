@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_155.py`
 - [ ] Create test file: `wingman/tests/test_llm_consistency_155.py`
 - [ ] Implement 1 tests: Tests 246-246
 - [ ] Test 246: Model switching (Ollama vs Claude)

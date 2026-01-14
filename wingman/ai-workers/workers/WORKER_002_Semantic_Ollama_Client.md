@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
 - [ ] Add Ollama client setup in `SemanticAnalyzer.__init__`
 - [ ] Implement `_test_ollama_connection()` method
 - [ ] Add connection validation with timeout (10 seconds)

@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/content_quality_validator.py`
 Create LLM prompt for scoring SUCCESS_CRITERIA section:
 
 - **Criteria:**

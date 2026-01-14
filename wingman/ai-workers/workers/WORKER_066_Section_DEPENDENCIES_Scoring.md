@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/content_quality_validator.py`
 - **Criteria:**
   - 0-2: Missing or "None"
   - 3-5: Lists dependencies but no versions

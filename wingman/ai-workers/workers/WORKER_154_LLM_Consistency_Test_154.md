@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_154.py`
 - [ ] Create test file: `wingman/tests/test_llm_consistency_154.py`
 - [ ] Implement 1 tests: Tests 245-245
 - [ ] Test 245: Prompt robustness (score consistency)

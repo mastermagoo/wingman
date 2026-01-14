@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/tuning_config.py`
 - [ ] Test auto-approve thresholds: 85, 87, 90, 92, 95
 - [ ] Analyze false negative rate for each threshold
 - [ ] Select optimal threshold (target: false negative <5%)

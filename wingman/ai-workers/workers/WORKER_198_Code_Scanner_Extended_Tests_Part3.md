@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_198.py`
 - [ ] Create test file: `wingman/tests/test_extended_198.py`
 - [ ] Implement 3 tests: Tests 287-289
 - [ ] Test 287: Docker-in-Docker patterns

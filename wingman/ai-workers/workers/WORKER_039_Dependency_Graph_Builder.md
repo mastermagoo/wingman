@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/dependency_analyzer.py`
 - [ ] Service dependency graph builder
 - [ ] Test results file: `ai-workers/results/worker-039-results.json`
 

@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/deployment/deploy_219.sh`
 - [ ] Enable validation for 100% of requests (VALIDATION_ENABLED=true)
 - [ ] Monitor for 24 hours
 - [ ] Final health check and verification

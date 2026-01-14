@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_162.py`
 - [ ] Create test file: `wingman/tests/test_e2e_162.py`
 - [ ] Implement 1 tests: Tests 253-253
 - [ ] Test 253: Telegram notification delivery

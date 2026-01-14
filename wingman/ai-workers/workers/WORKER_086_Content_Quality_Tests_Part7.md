@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_content_quality_validator.py`
 Add error handling tests:
 
 - **Tests 120-122:** Error handling (3 tests)

@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/content_quality_validator.py`
 Make auto-reject threshold configurable:
 
 - **Constant:** `AUTO_REJECT_THRESHOLD = 60` (default)

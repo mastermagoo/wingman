@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/composite_validator.py`
 - [ ] Modify POST /approvals/request to call validation
 - [ ] Run validation BEFORE creating approval record
 - [ ] Store validation results in approval record (new field)

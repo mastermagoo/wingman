@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_159.py`
 - [ ] Create test file: `wingman/tests/test_e2e_159.py`
 - [ ] Implement 1 tests: Tests 250-250
 - [ ] Test 250: Auto-approve flow (LOW risk + quality 95)

@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_147.py`
 - [ ] Create test file: `wingman/tests/test_concurrency_147.py`
 - [ ] Implement 2 tests: Tests 237-238
 - [ ] Test 237: Resource cleanup after validation

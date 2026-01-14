@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_120.py`
 - [ ] Create test file: `wingman/tests/test_edge_cases_120.py`
 - [ ] Implement 2 tests: Tests 182-183
 - [ ] Test 182: Network timeout to LLM

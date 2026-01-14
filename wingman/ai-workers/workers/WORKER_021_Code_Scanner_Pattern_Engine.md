@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/code_scanner.py`
 - [ ] Pattern matching engine (regex compilation)
 - [ ] Test results file: `ai-workers/results/worker-021-results.json`
 

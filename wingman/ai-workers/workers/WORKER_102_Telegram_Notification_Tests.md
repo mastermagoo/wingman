@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/composite_validator.py`
 - [ ] Create file: `wingman/tests/test_telegram_validation.py`
 - [ ] Test 1: Notification includes validation scores
 - [ ] Test 2: AUTO_APPROVE indicator shown correctly

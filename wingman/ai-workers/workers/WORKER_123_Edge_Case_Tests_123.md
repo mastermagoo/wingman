@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_123.py`
 - [ ] Create test file: `wingman/tests/test_edge_cases_123.py`
 - [ ] Implement 2 tests: Tests 188-189
 - [ ] Test 188: Memory exhaustion scenario

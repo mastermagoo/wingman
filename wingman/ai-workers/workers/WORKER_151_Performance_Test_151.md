@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_151.py`
 - [ ] Create test file: `wingman/tests/test_performance_151.py`
 - [ ] Implement 1 tests: Tests 242-242
 - [ ] Test 242: CPU usage (validation <30% CPU)

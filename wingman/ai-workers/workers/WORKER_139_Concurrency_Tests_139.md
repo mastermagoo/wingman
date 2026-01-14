@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_139.py`
 - [ ] Create test file: `wingman/tests/test_concurrency_139.py`
 - [ ] Implement 2 tests: Tests 221-222
 - [ ] Test 221: Parallel validator execution

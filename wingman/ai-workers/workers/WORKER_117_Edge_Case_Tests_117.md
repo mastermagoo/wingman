@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_117.py`
 - [ ] Create test file: `wingman/tests/test_edge_cases_117.py`
 - [ ] Implement 2 tests: Tests 176-177
 - [ ] Test 176: Contradictory requirements

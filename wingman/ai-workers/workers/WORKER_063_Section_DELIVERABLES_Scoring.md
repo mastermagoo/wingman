@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/content_quality_validator.py`
 Create LLM prompt for scoring DELIVERABLES section:
 
 - **Prompt Template:** Scoring criteria for DELIVERABLES (0-10 scale)

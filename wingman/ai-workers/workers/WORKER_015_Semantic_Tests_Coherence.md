@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_semantic_analyzer.py`
 - [ ] Tests 9-12: Coherence (coherent/incoherent/mixed/jargon)
 - [ ] Test results file: `ai-workers/results/worker-015-results.json`
 

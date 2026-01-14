@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/composite_validator.py`
 - [ ] Implement auto-approve logic in `_determine_recommendation()`
 - [ ] Condition: risk_level == 'LOW' AND final_score >= 90
 - [ ] Return 'AUTO_APPROVE' when conditions met

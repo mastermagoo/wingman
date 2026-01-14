@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_164.py`
 - [ ] Create 20 bad instruction examples
 - [ ] Document findings and changes
 - [ ] Test results file: `ai-workers/results/worker-164-results.json`

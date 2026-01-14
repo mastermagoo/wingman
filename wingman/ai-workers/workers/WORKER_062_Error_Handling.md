@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/content_quality_validator.py`
 - **Update:** `analyze_section()` method with try/except blocks
 - **Error Handling:**
   - LLM failures → fallback to heuristic

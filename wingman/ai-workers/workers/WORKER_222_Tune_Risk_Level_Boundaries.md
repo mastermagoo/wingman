@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/tuning_config.py`
 - [ ] Analyze risk level distribution in production data
 - [ ] Test LOW/MEDIUM/HIGH boundaries
 - [ ] Optimize for accurate risk classification

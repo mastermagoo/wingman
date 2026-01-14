@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_semantic_analyzer.py`
 - [ ] Tests 13-17: Edge cases (empty/single word/10K chars/special chars/multi-language)
 - [ ] Test results file: `ai-workers/results/worker-016-results.json`
 

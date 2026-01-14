@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_200.py`
 - [ ] Create test file: `wingman/tests/test_extended_200.py`
 - [ ] Implement 3 tests: Tests 293-295
 - [ ] Test 293: Package manager operations

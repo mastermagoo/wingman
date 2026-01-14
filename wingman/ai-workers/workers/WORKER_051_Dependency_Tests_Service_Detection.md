@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_dependency_analyzer.py`
 - [ ] Tests 74-78: Service detection tests (5 tests)
 - [ ] Test results file: `ai-workers/results/worker-051-results.json`
 

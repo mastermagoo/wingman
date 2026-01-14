@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/composite_validator.py`
 - [ ] Implement auto-reject logic in `_determine_recommendation()`
 - [ ] Condition 1: final_score < 60 → AUTO_REJECT
 - [ ] Condition 2: risk_level == 'CRITICAL' → AUTO_REJECT (regardless of score)

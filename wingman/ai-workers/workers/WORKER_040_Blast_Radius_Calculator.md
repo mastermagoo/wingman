@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/dependency_analyzer.py`
 - [ ] Blast radius calculation logic (0-100 scale)
 - [ ] Test results file: `ai-workers/results/worker-040-results.json`
 

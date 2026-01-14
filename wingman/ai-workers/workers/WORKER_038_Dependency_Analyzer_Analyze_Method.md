@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/dependency_analyzer.py`
 - [ ] analyze() method structure + input parsing
 - [ ] Test results file: `ai-workers/results/worker-038-results.json`
 

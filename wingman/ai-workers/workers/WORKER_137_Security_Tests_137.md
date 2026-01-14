@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_137.py`
 - [ ] Create test file: `wingman/tests/test_security_137.py`
 - [ ] Implement 3 tests: Tests 216-218
 - [ ] Test 216: Docker socket access validation

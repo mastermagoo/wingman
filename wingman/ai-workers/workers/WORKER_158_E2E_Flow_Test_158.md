@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_158.py`
 - [ ] Create test file: `wingman/tests/test_e2e_158.py`
 - [ ] Implement 1 tests: Tests 249-249
 - [ ] Test 249: Full approval flow (submission → validation → approval → execution)

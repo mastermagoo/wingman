@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_150.py`
 - [ ] Create test file: `wingman/tests/test_performance_150.py`
 - [ ] Implement 1 tests: Tests 241-241
 - [ ] Test 241: Memory usage (validation <100MB)

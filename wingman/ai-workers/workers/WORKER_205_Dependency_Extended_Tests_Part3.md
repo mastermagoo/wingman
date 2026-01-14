@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_205.py`
 - [ ] Create test file: `wingman/tests/test_extended_205.py`
 - [ ] Implement 3 tests: Tests 307-309
 - [ ] Test 307: External service dependencies

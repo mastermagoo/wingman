@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_177.py`
 - [ ] Capture baseline for instructions 1-10
 - [ ] Store baseline/results in fixtures/regression/
 - [ ] Test results file: `ai-workers/results/worker-177-results.json`

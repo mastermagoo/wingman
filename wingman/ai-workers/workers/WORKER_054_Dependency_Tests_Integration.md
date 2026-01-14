@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_dependency_analyzer.py`
 - [ ] Tests 89-93: Integration tests (5 tests, total: 20/20)
 - [ ] Test results file: `ai-workers/results/worker-054-results.json`
 

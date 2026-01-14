@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_118.py`
 - [ ] Create test file: `wingman/tests/test_edge_cases_118.py`
 - [ ] Implement 2 tests: Tests 178-179
 - [ ] Test 178: Circular dependency A→B→A

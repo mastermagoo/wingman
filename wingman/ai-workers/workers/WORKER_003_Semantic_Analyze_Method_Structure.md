@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
 - [ ] Implement `analyze(instruction: str) -> Dict[str, Any]` method signature
 - [ ] Add input validation (instruction length, empty check)
 - [ ] Add method docstring with return type specification

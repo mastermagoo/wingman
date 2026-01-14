@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_content_quality_validator.py`
 Add section weighting tests:
 
 - **Tests 116-119:** Weighting (4 tests)

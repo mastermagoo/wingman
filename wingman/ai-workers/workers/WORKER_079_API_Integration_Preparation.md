@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/content_quality_validator.py`
 Prepare validator for api_server.py integration:
 
 - **Export:** Add `__all__` to module for clean imports

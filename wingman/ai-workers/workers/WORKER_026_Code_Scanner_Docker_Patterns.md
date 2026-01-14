@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/code_scanner.py`
 - [ ] Patterns 6-10: Docker socket, privileged mode
 - [ ] Test results file: `ai-workers/results/worker-026-results.json`
 

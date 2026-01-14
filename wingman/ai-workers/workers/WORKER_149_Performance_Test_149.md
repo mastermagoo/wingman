@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_149.py`
 - [ ] Create test file: `wingman/tests/test_performance_149.py`
 - [ ] Implement 1 tests: Tests 240-240
 - [ ] Test 240: Throughput test (50 validations/min)

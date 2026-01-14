@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/code_scanner.py`
 - [ ] Patterns 1-5: File system ops (rm -rf, dd, mkfs)
 - [ ] Test results file: `ai-workers/results/worker-025-results.json`
 

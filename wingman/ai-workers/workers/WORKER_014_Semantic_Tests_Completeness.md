@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_semantic_analyzer.py`
 - [ ] Tests 5-8: Completeness (complete/missing DELIVERABLES/missing SUCCESS_CRITERIA/partial)
 - [ ] Test results file: `ai-workers/results/worker-014-results.json`
 

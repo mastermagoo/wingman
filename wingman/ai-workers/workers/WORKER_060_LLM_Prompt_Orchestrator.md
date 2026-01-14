@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/content_quality_validator.py`
 - **Method:** `_score_with_llm(section_name: str, section_content: str) -> Dict[str, Any]`
 - **Purpose:** Use semantic_analyzer to score section via LLM
 - **Location:** Private method in `ContentQualityValidator` class

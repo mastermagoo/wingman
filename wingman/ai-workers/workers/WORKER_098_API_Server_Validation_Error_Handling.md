@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/composite_validator.py`
 - [ ] Add try/except around validation calls
 - [ ] If LLM timeout: log error, use heuristic fallback
 - [ ] If validator crash: log error, set score=0, continue

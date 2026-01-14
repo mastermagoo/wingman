@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/deployment/deploy_214.sh`
 - [ ] Run full health check suite
 - [ ] Check all logs for errors
 - [ ] Verify database has validation results

@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/deployment/deploy_216.sh`
 - [ ] Deploy new code to PRD with VALIDATION_ENABLED=false
 - [ ] Restart PRD stack
 - [ ] Verify all services healthy

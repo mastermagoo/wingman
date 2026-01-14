@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_content_quality_validator.py`
 Add overall score calculation tests:
 
 - **Tests 103-107:** Overall score calculation (5 tests)

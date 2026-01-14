@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/dependency_analyzer.py`
 - [ ] Map service 2: execution-gateway (docker socket)
 - [ ] Test results file: `ai-workers/results/worker-044-results.json`
 

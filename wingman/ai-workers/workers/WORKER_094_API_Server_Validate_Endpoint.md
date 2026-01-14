@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/composite_validator.py`
 - [ ] Add `/approvals/validate` POST endpoint to `api_server.py`
 - [ ] Accept JSON: {instruction, task_name, deployment_env}
 - [ ] Call CompositeValidator.validate()

@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_148.py`
 - [ ] Create test file: `wingman/tests/test_performance_148.py`
 - [ ] Implement 1 tests: Tests 239-239
 - [ ] Test 239: Response time benchmark (validation <3s)

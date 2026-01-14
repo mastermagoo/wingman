@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/composite_validator.py`
 - [ ] Implement `validate()` method in `CompositeValidator`
 - [ ] Call semantic_analyzer.analyze(instruction, task_name, env)
 - [ ] Call code_scanner.scan(instruction)

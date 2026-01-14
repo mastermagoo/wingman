@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/code_scanner.py`
 - [ ] Risk level assignment (LOW/MEDIUM/HIGH/CRITICAL)
 - [ ] Test results file: `ai-workers/results/worker-022-results.json`
 

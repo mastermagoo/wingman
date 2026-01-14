@@ -1,0 +1,12 @@
+# AI Workers Orchestrator Requirements
+# For executing 225 workers with OpenAI + Ollama
+
+# LLM APIs
+openai>=1.0.0        # OpenAI API (203 workers)
+requests>=2.31.0     # For Ollama + mem0 APIs (22 workers + retrospectives)
+
+# Testing framework
+pytest>=7.4.0        # For running generated tests
+
+# Optional: For better async performance
+aiohttp>=3.9.0       # Async HTTP client (if needed)

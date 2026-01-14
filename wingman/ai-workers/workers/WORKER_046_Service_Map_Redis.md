@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/dependency_analyzer.py`
 - [ ] Map service 4: redis (none, root service)
 - [ ] Test results file: `ai-workers/results/worker-046-results.json`
 

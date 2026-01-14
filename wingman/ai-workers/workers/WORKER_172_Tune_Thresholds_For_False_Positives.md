@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_172.py`
 - [ ] Tune rejection thresholds
 - [ ] Document findings and changes
 - [ ] Test results file: `ai-workers/results/worker-172-results.json`

@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_135.py`
 - [ ] Create test file: `wingman/tests/test_security_135.py`
 - [ ] Implement 2 tests: Tests 212-213
 - [ ] Test 212: Secret leakage detection

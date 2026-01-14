@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_code_scanner.py`
 - [ ] Tests 64-73: Integration tests (10 tests, total: 20/20)
 - [ ] Test results file: `ai-workers/results/worker-036-results.json`
 

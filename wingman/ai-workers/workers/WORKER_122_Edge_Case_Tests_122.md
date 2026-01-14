@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_122.py`
 - [ ] Create test file: `wingman/tests/test_edge_cases_122.py`
 - [ ] Implement 2 tests: Tests 186-187
 - [ ] Test 186: Database connection error

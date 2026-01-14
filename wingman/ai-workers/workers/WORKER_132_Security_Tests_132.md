@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_132.py`
 - [ ] Create test file: `wingman/tests/test_security_132.py`
 - [ ] Implement 2 tests: Tests 206-207
 - [ ] Test 206: Command injection detection

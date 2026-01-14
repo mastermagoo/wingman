@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
 - [ ] Create clarity scoring prompt template
 - [ ] Add prompt that returns JSON {score: int, reasoning: str}
 - [ ] Add examples for low/medium/high clarity

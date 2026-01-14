@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_content_quality_validator.py`
 Add per-section scoring tests to test_content_quality.py:
 
 - **Tests 98-102:** Per-section scoring (5 tests)

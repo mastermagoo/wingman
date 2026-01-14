@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_167.py`
 - [ ] Run validation on 20 good instructions
 - [ ] Document findings and changes
 - [ ] Test results file: `ai-workers/results/worker-167-results.json`

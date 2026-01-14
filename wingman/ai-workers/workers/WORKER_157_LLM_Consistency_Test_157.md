@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_157.py`
 - [ ] Create test file: `wingman/tests/test_llm_consistency_157.py`
 - [ ] Implement 1 tests: Tests 248-248
 - [ ] Test 248: JSON format consistency

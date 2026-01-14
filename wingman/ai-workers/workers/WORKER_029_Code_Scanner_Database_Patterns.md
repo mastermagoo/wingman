@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/code_scanner.py`
 - [ ] Patterns 21-25: Database (DROP, TRUNCATE)
 - [ ] Test results file: `ai-workers/results/worker-029-results.json`
 

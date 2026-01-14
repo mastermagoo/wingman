@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_152.py`
 - [ ] Create test file: `wingman/tests/test_performance_152.py`
 - [ ] Implement 1 tests: Tests 243-243
 - [ ] Test 243: Database query count (<20 queries per validation)

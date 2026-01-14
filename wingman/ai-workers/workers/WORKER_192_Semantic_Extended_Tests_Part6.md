@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_192.py`
 - [ ] Create test file: `wingman/tests/test_extended_192.py`
 - [ ] Implement 3 tests: Tests 269-271
 - [ ] Test 269: Code blocks in instruction

@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_129.py`
 - [ ] Create test file: `wingman/tests/test_edge_cases_129.py`
 - [ ] Implement 2 tests: Tests 200-201
 - [ ] Test 200: Deadlock scenario (2 approvals)

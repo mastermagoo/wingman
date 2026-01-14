@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_content_quality_validator.py`
 Add final integration test:
 
 - **Test 123:** End-to-end content quality analysis

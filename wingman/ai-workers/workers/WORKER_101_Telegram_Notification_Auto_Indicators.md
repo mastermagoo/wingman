@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/composite_validator.py`
 - [ ] Add AUTO_APPROVE indicator to notification
 - [ ] Add AUTO_REJECT indicator (if visible to user)
 - [ ] Show recommendation: AUTO_APPROVE, AUTO_REJECT, MANUAL_REVIEW

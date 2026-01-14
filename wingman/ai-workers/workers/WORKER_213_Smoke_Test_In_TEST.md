@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/deployment/deploy_213.sh`
 - [ ] Enable VALIDATION_ENABLED=true in TEST
 - [ ] Submit 20 approval requests (mix of good/bad/edge)
 - [ ] Verify validation runs for each request

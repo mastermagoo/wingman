@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/content_quality_validator.py`
 Create main quality assessment function:
 
 - **Method:** `assess_content_quality(instruction: str) -> Dict[str, Any]`

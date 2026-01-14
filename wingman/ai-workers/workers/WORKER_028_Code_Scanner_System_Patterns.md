@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/code_scanner.py`
 - [ ] Patterns 16-20: System (reboot, shutdown, kill -9)
 - [ ] Test results file: `ai-workers/results/worker-028-results.json`
 

@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/code_scanner.py`
 - [ ] Error handling + malformed input
 - [ ] Test results file: `ai-workers/results/worker-024-results.json`
 

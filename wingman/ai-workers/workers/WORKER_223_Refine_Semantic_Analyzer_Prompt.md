@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/tuning_config.py`
 - [ ] Analyze semantic analyzer false positives from production
 - [ ] Identify prompt improvement opportunities
 - [ ] Test 3-5 prompt variations

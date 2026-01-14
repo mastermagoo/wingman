@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/tuning_config.py`
 - [ ] Generate comprehensive tuning report
 - [ ] Document all threshold changes
 - [ ] Document all prompt improvements

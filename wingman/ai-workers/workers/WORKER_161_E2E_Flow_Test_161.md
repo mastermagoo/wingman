@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_161.py`
 - [ ] Create test file: `wingman/tests/test_e2e_161.py`
 - [ ] Implement 1 tests: Tests 252-252
 - [ ] Test 252: Manual review flow (MEDIUM risk + quality 75)

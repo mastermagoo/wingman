@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_145.py`
 - [ ] Create test file: `wingman/tests/test_concurrency_145.py`
 - [ ] Implement 2 tests: Tests 233-234
 - [ ] Test 233: Transaction isolation READ_COMMITTED

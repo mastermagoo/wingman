@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
 - [ ] Implement `_calculate_final_score(responses: List[Dict]) -> int` method
 - [ ] Add score normalization to 0-100 range
 - [ ] Add weighted averaging logic (clarity 40%, completeness 40%, coherence 20%)

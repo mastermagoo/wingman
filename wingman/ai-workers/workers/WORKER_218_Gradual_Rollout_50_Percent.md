@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/deployment/deploy_218.sh`
 - [ ] Enable validation for 50% of requests
 - [ ] Monitor for 4 hours
 - [ ] Check error rate, response time, false positive rate

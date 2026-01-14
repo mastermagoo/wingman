@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/code_scanner.py`
 - [ ] scan() method structure + input validation
 - [ ] Test results file: `ai-workers/results/worker-020-results.json`
 

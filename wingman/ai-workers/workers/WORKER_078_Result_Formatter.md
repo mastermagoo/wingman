@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/content_quality_validator.py`
 Formalize JSON output structure:
 
 - **Function:** `format_content_quality_result()` - ensures consistent output

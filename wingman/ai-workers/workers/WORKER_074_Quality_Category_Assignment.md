@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/content_quality_validator.py`
 Add quality category to assessment results:
 
 - **Function:** `assign_quality_category(overall_score: int) -> str`

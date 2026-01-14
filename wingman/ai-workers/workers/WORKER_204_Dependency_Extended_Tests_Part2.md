@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_204.py`
 - [ ] Create test file: `wingman/tests/test_extended_204.py`
 - [ ] Implement 3 tests: Tests 304-306
 - [ ] Test 304: Service mesh dependencies

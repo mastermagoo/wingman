@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/deployment/deploy_212.sh`
 - [ ] Deploy all 4 validators to TEST environment
 - [ ] Update docker-compose.yml with validator services
 - [ ] Restart TEST stack with new validators

@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_138.py`
 - [ ] Create test file: `wingman/tests/test_security_138.py`
 - [ ] Implement 2 tests: Tests 219-220
 - [ ] Test 219: Sensitive data exposure

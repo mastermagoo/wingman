@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/composite_validator.py`
 - [ ] Create file: `wingman/tests/test_composite_validator.py`
 - [ ] Test 1: All validators called successfully
 - [ ] Test 2: Score calculation with mock validator results

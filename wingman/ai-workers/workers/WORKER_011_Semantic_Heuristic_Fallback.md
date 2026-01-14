@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
 - [ ] Rule-based scoring (word count, sections) when LLM fails
 - [ ] Test results file: `ai-workers/results/worker-011-results.json`
 

@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_185.py`
 - [ ] Regression test after content quality validator change
 - [ ] Store baseline/results in fixtures/regression/
 - [ ] Test results file: `ai-workers/results/worker-185-results.json`

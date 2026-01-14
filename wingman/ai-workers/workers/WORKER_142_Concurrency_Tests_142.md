@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_142.py`
 - [ ] Create test file: `wingman/tests/test_concurrency_142.py`
 - [ ] Implement 2 tests: Tests 227-228
 - [ ] Test 227: Database connection pooling

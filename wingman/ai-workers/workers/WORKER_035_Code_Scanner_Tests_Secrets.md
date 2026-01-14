@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_code_scanner.py`
 - [ ] Tests 59-63: Secret detection tests (5 tests)
 - [ ] Test results file: `ai-workers/results/worker-035-results.json`
 

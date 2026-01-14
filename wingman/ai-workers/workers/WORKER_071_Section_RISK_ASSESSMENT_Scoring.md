@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/content_quality_validator.py`
 - **Criteria:**
   - 0-2: Just a word ("low") or missing
   - 3-5: Brief statement without justification

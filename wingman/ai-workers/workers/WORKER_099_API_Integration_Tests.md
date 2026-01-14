@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/composite_validator.py`
 - [ ] Create file: `wingman/tests/test_api_validation.py`
 - [ ] Test 1: POST /approvals/validate returns validation results
 - [ ] Test 2: POST /approvals/request with poor quality → 400

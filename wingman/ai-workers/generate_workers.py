@@ -186,7 +186,7 @@ def generate_worker_file(worker_id, title, phase, description, task_type):
 - **Lessons learned:** [To be filled after execution]
 - **Store in mem0:**
   - Key: "wingman_worker_{worker_id}_retrospective"
-  - Namespace: "wingman"
+  - Namespace: "wingman_system"
   - Content: Implementation notes, test results, lessons learned
 
 ---

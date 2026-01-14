@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/code_scanner.py`
 - [ ] Patterns 11-15: Network (iptables, nc, curl external)
 - [ ] Test results file: `ai-workers/results/worker-027-results.json`
 

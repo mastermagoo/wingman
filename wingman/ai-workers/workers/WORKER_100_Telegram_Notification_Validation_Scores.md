@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/composite_validator.py`
 - [ ] Modify `telegram_bot.py` notification formatting
 - [ ] Add validation scores to approval notification
 - [ ] Display: final_score, risk_level, quality_score

@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_190.py`
 - [ ] Create test file: `wingman/tests/test_extended_190.py`
 - [ ] Implement 3 tests: Tests 263-265
 - [ ] Test 263: Large instruction (5K+ words)

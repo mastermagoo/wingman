@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_184.py`
 - [ ] Regression test after dependency analyzer change
 - [ ] Store baseline/results in fixtures/regression/
 - [ ] Test results file: `ai-workers/results/worker-184-results.json`

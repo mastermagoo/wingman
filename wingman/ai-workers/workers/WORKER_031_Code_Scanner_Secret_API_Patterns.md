@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/code_scanner.py`
 - [ ] Secret patterns 1-5: API keys, tokens
 - [ ] Test results file: `ai-workers/results/worker-031-results.json`
 

@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_semantic_analyzer.py`
 - [ ] Tests 1-4: Clarity scoring (high/moderate/low/vague)
 - [ ] Test results file: `ai-workers/results/worker-013-results.json`
 

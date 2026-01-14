@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
 - [ ] Implement `_build_reasoning_dict(responses: List[Dict]) -> Dict[str, str]` method
 - [ ] Add JSON schema validation for reasoning structure
 - [ ] Return dict with keys: clarity, completeness, coherence

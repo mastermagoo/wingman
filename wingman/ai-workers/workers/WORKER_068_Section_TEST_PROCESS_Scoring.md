@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/content_quality_validator.py`
 - **Criteria:**
   - 0-2: Missing or "test it"
   - 3-5: Generic ("run tests")

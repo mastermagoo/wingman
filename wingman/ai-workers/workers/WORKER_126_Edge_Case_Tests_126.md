@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_126.py`
 - [ ] Create test file: `wingman/tests/test_edge_cases_126.py`
 - [ ] Implement 2 tests: Tests 194-195
 - [ ] Test 194: Rate limit exceeded (LLM)

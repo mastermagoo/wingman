@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_160.py`
 - [ ] Create test file: `wingman/tests/test_e2e_160.py`
 - [ ] Implement 1 tests: Tests 251-251
 - [ ] Test 251: Auto-reject flow (quality 50)

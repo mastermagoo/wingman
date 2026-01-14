@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_187.py`
 - [ ] Create test file: `wingman/tests/test_extended_187.py`
 - [ ] Implement 3 tests: Tests 254-256
 - [ ] Test 254: Complex nested instructions

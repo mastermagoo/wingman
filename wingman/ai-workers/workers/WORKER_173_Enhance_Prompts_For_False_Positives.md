@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_173.py`
 - [ ] Refine LLM prompts
 - [ ] Document findings and changes
 - [ ] Test results file: `ai-workers/results/worker-173-results.json`

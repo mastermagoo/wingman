@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_121.py`
 - [ ] Create test file: `wingman/tests/test_edge_cases_121.py`
 - [ ] Implement 2 tests: Tests 184-185
 - [ ] Test 184: LLM service down

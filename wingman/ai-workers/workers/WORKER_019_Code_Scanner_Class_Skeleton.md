@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/code_scanner.py`
 - [ ] Class skeleton + __init__
 - [ ] Test results file: `ai-workers/results/worker-019-results.json`
 

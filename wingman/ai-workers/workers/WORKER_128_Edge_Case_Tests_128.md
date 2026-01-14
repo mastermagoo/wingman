@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_128.py`
 - [ ] Create test file: `wingman/tests/test_edge_cases_128.py`
 - [ ] Implement 2 tests: Tests 198-199
 - [ ] Test 198: Race condition in status update

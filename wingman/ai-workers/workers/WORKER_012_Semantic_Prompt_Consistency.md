@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
 - [ ] Run prompt 3x, check variance <10%
 - [ ] Test results file: `ai-workers/results/worker-012-results.json`
 

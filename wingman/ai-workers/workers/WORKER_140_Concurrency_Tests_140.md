@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_140.py`
 - [ ] Create test file: `wingman/tests/test_concurrency_140.py`
 - [ ] Implement 2 tests: Tests 223-224
 - [ ] Test 223: 100 concurrent approval requests

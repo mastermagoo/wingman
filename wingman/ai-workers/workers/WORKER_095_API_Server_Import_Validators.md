@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/composite_validator.py`
 - [ ] Import all 4 validators into `api_server.py`
 - [ ] Initialize validators at startup (module-level)
 - [ ] Pass validator instances to CompositeValidator

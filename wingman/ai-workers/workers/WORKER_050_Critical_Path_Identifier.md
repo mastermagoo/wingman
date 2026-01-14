@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/dependency_analyzer.py`
 - [ ] Critical path identifier (single points of failure)
 - [ ] Test results file: `ai-workers/results/worker-050-results.json`
 

@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/content_quality_validator.py`
 Add configurable section weights:
 
 - **Constant:** `SECTION_WEIGHTS` dict with weight per section

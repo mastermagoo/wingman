@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/content_quality_validator.py`
 Add auto-reject flag to assessment:
 
 - **Field:** `auto_reject: bool` in return dict

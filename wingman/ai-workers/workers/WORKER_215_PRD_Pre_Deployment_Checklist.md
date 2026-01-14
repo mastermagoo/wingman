@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/deployment/deploy_215.sh`
 - [ ] Create database backup (PRD)
 - [ ] Document rollback plan
 - [ ] Verify docker images built and tagged

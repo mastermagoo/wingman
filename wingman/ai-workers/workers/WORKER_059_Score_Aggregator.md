@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/content_quality_validator.py`
 - **Function:** `calculate_overall_score(section_scores: Dict[str, int]) -> int`
 - **Purpose:** Aggregate 10 section scores (0-10 each) into overall score (0-100)
 - **Formula:** Sum all section scores (max 100)

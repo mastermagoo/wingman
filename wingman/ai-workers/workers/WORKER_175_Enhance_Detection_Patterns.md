@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_175.py`
 - [ ] Add missing detection patterns
 - [ ] Document findings and changes
 - [ ] Test results file: `ai-workers/results/worker-175-results.json`

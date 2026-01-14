@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/composite_validator.py`
 - [ ] Add validation_results field to GET /approvals/{id} response
 - [ ] Include: semantic analysis, code scan, dependency, content quality
 - [ ] Add final_score and recommendation to response

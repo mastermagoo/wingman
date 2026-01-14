@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/composite_validator.py`
 - [ ] Implement `_calculate_final_score()` method
 - [ ] Combine semantic (risk level), code (dangerous patterns), dependency (blast radius), content (quality score)
 - [ ] Weight calculation: content quality 40%, semantic risk 30%, dependency 20%, code 10%

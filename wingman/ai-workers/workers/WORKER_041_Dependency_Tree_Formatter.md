@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/dependency_analyzer.py`
 - [ ] Dependency tree formatting + JSON output
 - [ ] Test results file: `ai-workers/results/worker-041-results.json`
 

@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_165.py`
 - [ ] Create 20 edge case instructions
 - [ ] Document findings and changes
 - [ ] Test results file: `ai-workers/results/worker-165-results.json`

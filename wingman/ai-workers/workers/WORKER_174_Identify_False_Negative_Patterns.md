@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_174.py`
 - [ ] Analyze false negatives
 - [ ] Document findings and changes
 - [ ] Test results file: `ai-workers/results/worker-174-results.json`

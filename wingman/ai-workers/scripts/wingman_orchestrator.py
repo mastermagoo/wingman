@@ -24,7 +24,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
-import openai
+from openai import OpenAI
 import requests
 
 
@@ -89,9 +89,12 @@ class WingmanOrchestrator:
         self.results_dir = Path(results_dir)
         self.results_dir.mkdir(exist_ok=True, parents=True)
 
-        # API configuration
+        # API configuration - using intel-system's LLM infrastructure
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
-        self.ollama_endpoint = os.getenv("OLLAMA_ENDPOINT", "http://localhost:11434")
+        self.openai_client = OpenAI(api_key=self.openai_api_key) if self.openai_api_key else None
+        # Intel-system LLM endpoints (intelligent routing + fallback)
+        self.intel_llm_processor = os.getenv("INTEL_LLM_PROCESSOR", "http://localhost:18027")
+        self.ollama_endpoint = self.intel_llm_processor  # Use intel-system's LLM processor
         self.mem0_api_url = os.getenv("MEM0_API_URL", "http://127.0.0.1:18888")
         self.mem0_user_id = os.getenv("MEM0_USER_ID", "wingman")
 
@@ -113,8 +116,9 @@ class WingmanOrchestrator:
         print(f"   Workers dir: {self.workers_dir}")
         print(f"   Results dir: {self.results_dir}")
         print(f"   OpenAI: {'✅' if self.openai_api_key else '❌'}")
-        print(f"   Ollama: {self.ollama_endpoint}")
+        print(f"   Intel-system LLM Processor: {self.intel_llm_processor}")
         print(f"   mem0: {self.mem0_api_url} (namespace: {self.mem0_user_id})")
+        print(f"   Using shared host Ollama via intel-system (10 models)")
 
     def load_worker_instructions(self, pattern: str = "WORKER_*.md"):
         """Load all worker instruction files"""
@@ -310,6 +314,34 @@ class WingmanOrchestrator:
 
     async def generate_code_openai(self, instruction: WorkerInstruction) -> str:
         """Generate code using OpenAI API"""
+        # Extract file path from deliverables to determine correct import structure
+        file_path = None
+        for deliverable in instruction.deliverables:
+            path_match = re.search(r'`(.*?\.py)`', deliverable)
+            if path_match:
+                file_path = path_match.group(1)
+                break
+
+        import_hint = ""
+        if file_path:
+            if "test_" in file_path:
+                # Test file - specify correct import paths
+                import_hint = f"""
+IMPORTANT - Import Structure:
+- File location: {file_path}
+- For imports from validation/, use: from validation.module_name import ClassName
+- For imports from wingman/, use: from wingman.module_name import ClassName
+- Example: from validation.semantic_analyzer import SemanticAnalyzer
+"""
+            else:
+                # Implementation file
+                import_hint = f"""
+IMPORTANT - Module Structure:
+- File location: {file_path}
+- This module will be imported by tests
+- Use standard library imports and local relative imports only
+"""
+
         prompt = f"""You are a code generator for Wingman validation enhancement.
 
 Worker: {instruction.worker_id} - {instruction.worker_name}
@@ -322,14 +354,14 @@ SUCCESS_CRITERIA:
 
 BOUNDARIES:
 {instruction.boundaries}
-
+{import_hint}
 Generate ONLY executable Python code. NO explanations, NO guides, NO comments like "Step 1" or "TODO".
 Output must be complete, working code that satisfies ALL success criteria.
 
 CODE:"""
 
         response = await asyncio.to_thread(
-            openai.ChatCompletion.create,
+            self.openai_client.chat.completions.create,
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are an expert Python code generator. Output ONLY code, no explanations."},
@@ -348,35 +380,45 @@ CODE:"""
         return code
 
     async def generate_code_ollama(self, instruction: WorkerInstruction) -> str:
-        """Generate code using Ollama"""
+        """Generate code using intel-system's LLM Processor"""
+        # Extract file path for import hints
+        file_path = None
+        for deliverable in instruction.deliverables:
+            path_match = re.search(r'`(.*?\.py)`', deliverable)
+            if path_match:
+                file_path = path_match.group(1)
+                break
+
+        import_hint = ""
+        if file_path and "test_" in file_path:
+            import_hint = "\nImports: Use 'from validation.module_name import ClassName' for validation modules."
+
         prompt = f"""PYTHON CODE ONLY. NO EXPLANATIONS.
 
 {instruction.worker_name}
 
 Deliverables:
 {chr(10).join(instruction.deliverables)}
+{import_hint}
 
 Code:"""
 
+        # Use intel-system LLM Processor endpoint (provides intelligent routing)
         payload = {
-            "model": "mistral:7b",
             "prompt": prompt,
-            "stream": False,
-            "options": {
-                "temperature": 0.1,
-                "num_predict": 4000
-            }
+            "model": "codellama:13b",  # Use proven codellama for code generation
+            "max_tokens": 4000
         }
 
         response = await asyncio.to_thread(
             requests.post,
-            f"{self.ollama_endpoint}/api/generate",
+            f"{self.intel_llm_processor}/generate",
             json=payload,
             timeout=300
         )
 
         result = response.json()
-        code = result.get("response", "")
+        code = result.get("text", result.get("response", ""))  # Support multiple response formats
 
         return code
 
@@ -391,13 +433,14 @@ Code:"""
         """Write generated code to deliverable files"""
         # Extract file paths from deliverables
         for deliverable in instruction.deliverables:
-            if deliverable.startswith("Create file:") or deliverable.startswith("Implement"):
-                # Extract file path
-                path_match = re.search(r'`(.*?\.py)`', deliverable)
-                if path_match:
-                    file_path = Path(path_match.group(1))
-                    file_path.parent.mkdir(parents=True, exist_ok=True)
-                    file_path.write_text(code)
+            # Look for any Python file paths in backticks
+            path_match = re.search(r'`(.*?\.py)`', deliverable)
+            if path_match:
+                file_path = Path(path_match.group(1))
+                print(f"   📝 Writing to: {file_path}")
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+                file_path.write_text(code)
+                break  # Only write once per worker
 
     async def validate_worker(self, instruction: WorkerInstruction) -> Dict[str, Any]:
         """Validate worker output against SUCCESS_CRITERIA"""

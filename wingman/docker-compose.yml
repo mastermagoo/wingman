@@ -28,8 +28,11 @@ services:
       # TEST: avoid hard failure during Compose interpolation (env_file is not used for interpolation).
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
-      - OLLAMA_HOST=${OLLAMA_HOST:-ollama}
+      # Use intel-system's LLM infrastructure (shared host Ollama)
+      - OLLAMA_HOST=${OLLAMA_HOST:-host.docker.internal}
       - OLLAMA_PORT=${OLLAMA_PORT:-11434}
+      - INTEL_LLM_ROUTER=${INTEL_LLM_ROUTER:-http://host.docker.internal:18023}
+      - INTEL_LLM_PROCESSOR=${INTEL_LLM_PROCESSOR:-http://host.docker.internal:18027}
       # mem0 Configuration (loaded from .env.test)
       - MEM0_API_URL=${MEM0_API_URL:-http://127.0.0.1:18888}
       - MEM0_USER_ID=${MEM0_USER_ID:-wingman}
@@ -49,7 +52,7 @@ services:
     depends_on:
       - postgres
       - redis
-      - ollama
+      # Removed ollama dependency - using shared host Ollama via intel-system
     networks:
       - wingman-network
     # No host/bind volumes in TEST by default (prevents permission issues and reduces secret exposure).
@@ -199,27 +202,8 @@ services:
       timeout: 5s
       retries: 5
 
-  # Ollama for Mistral 7B
-  ollama:
-    image: ollama/ollama:latest
-    # Do not publish the Ollama port in TEST by default; it often collides with
-    # other Ollama instances already bound to 11434 on the host. Wingman API
-    # reaches Ollama over the Docker network via service name `ollama:11434`.
-    volumes:
-      - ollama_data:/root/.ollama
-    networks:
-      - wingman-network
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 8G
-    healthcheck:
-      # Note: ollama/ollama image does NOT include curl, use ollama CLI instead
-      test: ["CMD", "ollama", "list"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+  # Removed: ollama service - now using shared host Ollama via intel-system LLM infrastructure
+  # Intel-system provides LLM Router (18023) and LLM Processor (18027) with intelligent routing
 
 networks:
   wingman-network:
@@ -232,5 +216,4 @@ volumes:
     driver: local
   redis_data:
     driver: local
-  ollama_data:
-    driver: local
+  # Removed: ollama_data volume - using shared host Ollama

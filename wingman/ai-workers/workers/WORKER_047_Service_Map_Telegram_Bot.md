@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/dependency_analyzer.py`
 - [ ] Map service 5: telegram-bot (wingman-api)
 - [ ] Test results file: `ai-workers/results/worker-047-results.json`
 

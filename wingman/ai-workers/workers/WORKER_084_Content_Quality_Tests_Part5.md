@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_content_quality_validator.py`
 Add auto-reject threshold tests:
 
 - **Tests 112-115:** Auto-reject (4 tests)

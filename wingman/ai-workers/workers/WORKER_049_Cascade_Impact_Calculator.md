@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/dependency_analyzer.py`
 - [ ] Cascade impact calculator (if postgres down, what breaks?)
 - [ ] Test results file: `ai-workers/results/worker-049-results.json`
 

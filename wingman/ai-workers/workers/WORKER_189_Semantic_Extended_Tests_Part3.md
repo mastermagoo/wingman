@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_189.py`
 - [ ] Create test file: `wingman/tests/test_extended_189.py`
 - [ ] Implement 3 tests: Tests 260-262
 - [ ] Test 260: Risk level edge cases

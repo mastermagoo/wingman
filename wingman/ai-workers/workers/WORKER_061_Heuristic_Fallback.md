@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/content_quality_validator.py`
 - **Function:** `_score_heuristic(section_name: str, section_content: str) -> Dict[str, Any]`
 - **Purpose:** Rule-based scoring when LLM unavailable
 - **Logic:**

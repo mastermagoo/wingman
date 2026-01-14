@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_153.py`
 - [ ] Create test file: `wingman/tests/test_llm_consistency_153.py`
 - [ ] Implement 1 tests: Tests 244-244
 - [ ] Test 244: Same instruction 10x (variance <10%)

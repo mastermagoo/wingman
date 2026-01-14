@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_156.py`
 - [ ] Create test file: `wingman/tests/test_llm_consistency_156.py`
 - [ ] Implement 1 tests: Tests 247-247
 - [ ] Test 247: Temperature sensitivity (temp 0.0 vs 0.7)

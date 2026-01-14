@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_semantic_analyzer.py`
 - [ ] Tests 18-21: Error handling (timeout/invalid JSON/retry/fallback)
 - [ ] Test results file: `ai-workers/results/worker-017-results.json`
 

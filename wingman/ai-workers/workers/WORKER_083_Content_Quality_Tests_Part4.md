@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_content_quality_validator.py`
 Add quality category assignment tests:
 
 - **Tests 108-111:** Quality category (4 tests)

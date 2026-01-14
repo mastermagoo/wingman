@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/dependency_analyzer.py`
 - [ ] Class skeleton + __init__
 - [ ] Test results file: `ai-workers/results/worker-037-results.json`
 

@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/deployment/deploy_211.sh`
 - [ ] Add VALIDATION_ENABLED feature flag to .env.test and .env.prd
 - [ ] Implement feature flag check in api_server.py
 - [ ] Default: VALIDATION_ENABLED=false (disabled until ready)

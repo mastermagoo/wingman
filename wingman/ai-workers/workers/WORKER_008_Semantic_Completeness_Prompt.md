@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
 - [ ] Completeness scoring prompt template (10-point check)
 - [ ] Test results file: `ai-workers/results/worker-008-results.json`
 

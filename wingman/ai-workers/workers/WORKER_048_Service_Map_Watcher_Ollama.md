@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/dependency_analyzer.py`
 - [ ] Map services 6-7: watcher, ollama dependencies
 - [ ] Test results file: `ai-workers/results/worker-048-results.json`
 

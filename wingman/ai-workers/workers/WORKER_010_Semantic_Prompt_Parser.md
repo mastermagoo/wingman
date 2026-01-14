@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
 - [ ] Parse LLM JSON responses, extract scores
 - [ ] Test results file: `ai-workers/results/worker-010-results.json`
 

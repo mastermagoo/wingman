@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_196.py`
 - [ ] Create test file: `wingman/tests/test_extended_196.py`
 - [ ] Implement 3 tests: Tests 281-283
 - [ ] Test 281: Obfuscated commands

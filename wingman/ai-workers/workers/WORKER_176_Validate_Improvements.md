@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_176.py`
 - [ ] Re-run full dataset validation
 - [ ] Document findings and changes
 - [ ] Test results file: `ai-workers/results/worker-176-results.json`

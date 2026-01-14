@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/code_scanner.py`
 - [ ] Patterns 26-30: Code execution (eval, exec, os.system)
 - [ ] Test results file: `ai-workers/results/worker-030-results.json`
 

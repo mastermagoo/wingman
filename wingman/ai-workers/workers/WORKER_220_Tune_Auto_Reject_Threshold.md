@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/tuning_config.py`
 - [ ] Test auto-reject thresholds: 50, 55, 60, 65, 70
 - [ ] Analyze false positive rate for each threshold
 - [ ] Select optimal threshold (target: false positive <10%)

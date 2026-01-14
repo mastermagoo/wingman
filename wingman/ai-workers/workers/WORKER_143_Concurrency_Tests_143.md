@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_143.py`
 - [ ] Create test file: `wingman/tests/test_concurrency_143.py`
 - [ ] Implement 2 tests: Tests 229-230
 - [ ] Test 229: Lock contention on approval record

@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
 - [ ] Add timeout handling for LLM calls (30 second timeout)
 - [ ] Add invalid JSON response handling with fallback
 - [ ] Add connection error handling (network failures)

@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_semantic_analyzer.py`
 - [ ] Tests 22-23: Integration (score range/performance benchmark)
 - [ ] Test results file: `ai-workers/results/worker-018-results.json`
 

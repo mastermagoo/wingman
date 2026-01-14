@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/validation/dependency_analyzer.py`
 - [ ] Error handling + unknown service handling
 - [ ] Test results file: `ai-workers/results/worker-042-results.json`
 

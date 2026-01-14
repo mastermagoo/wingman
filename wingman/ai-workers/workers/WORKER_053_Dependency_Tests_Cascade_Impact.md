@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_dependency_analyzer.py`
 - [ ] Tests 84-88: Cascade impact tests (5 tests)
 - [ ] Test results file: `ai-workers/results/worker-053-results.json`
 

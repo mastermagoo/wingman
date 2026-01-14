@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_114.py`
 - [ ] Create test file: `wingman/tests/test_edge_cases_114.py`
 - [ ] Implement 2 tests: Tests 170-171
 - [ ] Test 170: Boundary value: score 0

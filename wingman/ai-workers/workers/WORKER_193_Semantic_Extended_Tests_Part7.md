@@ -10,6 +10,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_integration_193.py`
 - [ ] Create test file: `wingman/tests/test_extended_193.py`
 - [ ] Implement 3 tests: Tests 272-274
 - [ ] Test 272: Time-sensitive operations

@@ -9,6 +9,7 @@
 
 ## 1. DELIVERABLES
 
+- [ ] Create/update file: `wingman/tests/test_content_quality_validator.py`
 Create first test file for content quality validator:
 
 - **File:** `/Volumes/Data/ai_projects/wingman-system/wingman/wingman/tests/test_content_quality.py`
