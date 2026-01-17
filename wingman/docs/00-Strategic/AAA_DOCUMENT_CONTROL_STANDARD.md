@@ -53,3 +53,52 @@ Internal `Version`/`Last Updated` makes documents readable. **Git history is the
 
 If an `AAA_*` file shows as untracked (`??`) in `git status`, it is **not yet under version control** until it is added + committed.
 
+---
+
+## Agent Brief: “What’s what” (share this with other agents)
+
+### Canonical location + branch
+
+- **Canonical docs location**: `wingman/docs/`
+- **Canonical branch for docs**: `main`
+
+### Where to start (the authoritative map)
+
+#### Strategy / roadmap (DEV/TEST/PRD)
+
+- `wingman/docs/00-Strategic/AAA_WINGMAN_STRATEGY_ROADMAP.md`
+
+#### Business cases
+
+- `wingman/docs/00-Strategic/AAA_WINGMAN_ENFORCEMENT_BUSINESS_CASE.md`
+- `wingman/docs/00-Strategic/AAA_VALIDATION_ENHANCEMENT_BUSINESS_CASE.md` *(validation enhancement track)*
+
+#### Architecture (3 docs: current state, current build, gap/next)
+
+- `wingman/docs/02-architecture/AAA_WINGMAN_ARCHITECTURE_CURRENT_STATE.md`
+- `wingman/docs/02-architecture/AAA_WINGMAN_ARCHITECTURE_CURRENT_BUILD.md`
+- `wingman/docs/02-architecture/AAA_WINGMAN_ARCHITECTURE_GAP_NEXT.md`
+
+#### Operations (runbooks)
+
+- `wingman/docs/03-operations/AAA_WINGMAN_OPERATIONS_DEPLOYMENT_RUNBOOK.md`
+
+#### Deployments (plans + records)
+
+- Index: `wingman/docs/deployment/README.md`
+- Deployment record: `wingman/docs/deployment/AAA_DEPLOYMENT_COMPLETE.md`
+- PRD gateway plan: `wingman/docs/deployment/AAA_PRD_DEPLOYMENT_PLAN.md`
+
+#### Legacy / archive (read-only unless explicitly resurrecting)
+
+- `wingman/docs/99-archive/`
+
+### Rules of engagement (so agents don’t create doc chaos)
+
+- **Do not create “new versions” of docs by copying files** (no `*_v2.md`, no `NEW_*.md` duplicates).
+- **Update the existing authoritative `AAA_*` doc in-place** and bump:
+  - `**Last Updated**`
+  - `**Version**`
+  - add a short change note (if appropriate)
+- **If a doc is concept/legacy**: set `**Status**: ARCHIVE` and keep it under `99-archive/`.
+
