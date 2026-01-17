@@ -33,5 +33,5 @@ data/
 # Block other project directories that might exist at root level
 migration_from_intel-system/
 tools/
-docs/
+/docs/
 *.code-workspace

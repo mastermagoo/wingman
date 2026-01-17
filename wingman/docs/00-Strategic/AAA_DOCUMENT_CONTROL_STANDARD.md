@@ -61,6 +61,7 @@ If an `AAA_*` file shows as untracked (`??`) in `git status`, it is **not yet un
 
 - **Canonical docs location**: `wingman/docs/`
 - **Canonical branch for docs**: `main`
+  - Note: the legacy root folder `/Volumes/Data/ai_projects/wingman-system/docs` has been **moved into** `wingman/docs/99-archive/` and the root folder no longer exists in this workspace.
 
 ### Where to start (the authoritative map)
 
