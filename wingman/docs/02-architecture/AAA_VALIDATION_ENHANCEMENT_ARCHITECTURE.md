@@ -1,4 +1,9 @@
 # Wingman Validation Enhancement - Architecture Design
+**Status**: CURRENT  
+**Last Updated**: 2026-01-17  
+**Version**: 1.0  
+**Scope**: Wingman architecture documentation (DEV/TEST/PRD)  
+
 **Date:** 2026-01-11
 **Version:** 1.0
 **Status:** Design Review

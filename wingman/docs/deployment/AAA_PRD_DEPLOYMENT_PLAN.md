@@ -1,4 +1,9 @@
 # Wingman PRD Execution Gateway Deployment Plan
+**Status**: CURRENT  
+**Last Updated**: 2026-01-17  
+**Version**: 1.0  
+**Scope**: Wingman deployment documentation (DEV/TEST/PRD)  
+
 **Date:** 2026-01-10  
 **Status:** Ready for Approval  
 **Environment:** PRD (Mac Studio)

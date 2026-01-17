@@ -1,4 +1,9 @@
 # Wingman SSD Activation Plan - Use Existing Hardened Build
+**Status**: CURRENT  
+**Last Updated**: 2026-01-17  
+**Version**: 1.0  
+**Scope**: Wingman deployment documentation (DEV/TEST/PRD)  
+
 **Date:** 2026-01-10
 **Status:** Existing hardened Wingman on SSD - Ready to activate
 **Goal:** Access hardened Wingman for TEST 0A-2 verification

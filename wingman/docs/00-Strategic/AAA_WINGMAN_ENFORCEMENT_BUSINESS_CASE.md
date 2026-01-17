@@ -1,5 +1,10 @@
 # Wingman Enforcement Layer - Business Case
 
+**Status**: CURRENT  
+**Last Updated**: 2026-01-17  
+**Version**: 1.0  
+**Scope**: Wingman strategy/business documentation (DEV/TEST/PRD)  
+
 **Document Version:** 1.0
 **Date:** 2026-01-07
 **Author:** Claude (Sonnet 4.5)

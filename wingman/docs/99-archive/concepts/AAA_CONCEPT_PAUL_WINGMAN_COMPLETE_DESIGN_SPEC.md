@@ -1,3 +1,14 @@
+# Document Control
+**Last Updated**: 2026-01-17  
+**Version**: 1.0  
+
+**Status**: ARCHIVE (concept doc)  
+**Original Date**: UNKNOWN (not recorded in file)  
+**Last Updated (doc control added)**: 2026-01-17  
+**Scope**: Concept / product vision (not deployment-specific)  
+
+---
+
 # PAUL WINGMAN - COMPLETE PRODUCT SPECIFICATION
 ## AI Verification & Truth System
 

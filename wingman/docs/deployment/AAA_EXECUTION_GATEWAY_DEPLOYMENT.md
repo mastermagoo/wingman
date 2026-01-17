@@ -1,5 +1,9 @@
 # Execution Gateway Deployment Guide
 
+**Last Updated**: 2026-01-17  
+**Version**: 1.0  
+**Scope**: Wingman deployment documentation (DEV/TEST/PRD)  
+
 **Status**: Core code already exists, needs deployment only
 
 ---

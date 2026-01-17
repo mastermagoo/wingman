@@ -1,8 +1,20 @@
 # Wingman Architecture
 
+**Last Updated**: 2026-01-17  
+**Version**: 1.0  
+**Scope**: Wingman architecture documentation (DEV/TEST/PRD)  
+
 > **Version**: 3.1 (Phase R0 Active in TEST)  
 > **Last Updated**: January 2026  
 > **Status**: Production (PRD on Mac Studio), Enforcement Layer deployed in TEST
+
+---
+
+## Document Map (authoritative set)
+
+- **Current state (this doc)**: overall architecture + environment matrix (DEV/TEST/PRD)
+- **Current build design**: `AAA_WINGMAN_ARCHITECTURE_CURRENT_BUILD.md`
+- **Gap + what comes next**: `AAA_WINGMAN_ARCHITECTURE_GAP_NEXT.md`
 
 ---
 
@@ -349,7 +361,7 @@ Every instruction must include:
 - `wingman_approval_client.py` - Client library
 - `tools/poll_approval.py` - Approval polling
 
-**PRD Deployment**: See [PRD_DEPLOYMENT_PLAN.md](./PRD_DEPLOYMENT_PLAN.md)
+**PRD Deployment**: See [AAA_PRD_DEPLOYMENT_PLAN.md](../deployment/AAA_PRD_DEPLOYMENT_PLAN.md)
 
 ### Phase 5: Hardening & Multi-tenant 🚧
 
@@ -536,7 +548,7 @@ networks:
 | `docs/01-how-to-use/` | Integration guides |
 | `docs/02-architecture/` | This document |
 | `docs/03-operations/` | Operational runbooks |
-| `DEPLOYMENT_PLAN.md` | Master deployment roadmap |
+| `docs/00-Strategic/AAA_WINGMAN_STRATEGY_ROADMAP.md` | Master strategy/roadmap (DEV/TEST/PRD) |
 | `CLAUDE.md` | AI agent instructions |
 
 ---
@@ -581,8 +593,8 @@ Execute ONLY if approved
 ## See Also
 
 - [How to Use Wingman](../01-how-to-use/README.md) — Integration guide
-- [Operations Guide](../03-operations/README.md) — Day-to-day operations
+- [Operations Runbook](../03-operations/AAA_WINGMAN_OPERATIONS_DEPLOYMENT_RUNBOOK.md) — Day-to-day operations
 - [API Reference](../05-api-reference/README.md) — Endpoint documentation
-- [PRD Deployment Plan](./PRD_DEPLOYMENT_PLAN.md) — Execution Gateway PRD deployment
+- [PRD Deployment Plan](../deployment/AAA_PRD_DEPLOYMENT_PLAN.md) — Execution Gateway PRD deployment
 - [Hardening Summary](../HARDENING_COMPLETE_SUMMARY.md) — Complete hardening status
 - [Critical Gap Analysis](../../docs/CRITICAL_ARCHITECTURAL_GAP_ANALYSIS.md) — Original gap analysis (now remediated)

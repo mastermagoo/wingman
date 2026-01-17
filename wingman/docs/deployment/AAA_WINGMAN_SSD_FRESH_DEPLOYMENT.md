@@ -1,4 +1,9 @@
 # Wingman SSD Fresh Deployment - Clean Install v4/5
+**Status**: CURRENT  
+**Last Updated**: 2026-01-17  
+**Version**: 1.0  
+**Scope**: Wingman deployment documentation (DEV/TEST/PRD)  
+
 **Date:** 2026-01-10
 **Goal:** Deploy current Wingman v4/5 to clean SSD with true isolation
 **Time Estimate:** 30-45 minutes

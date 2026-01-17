@@ -675,6 +675,7 @@ pip install -r requirements.txt
 **Command:**
 ```bash
 source ai-workers/venv/bin/activate
+OPENAI_API_KEY=$OPENAI_API_KEY \
 INTEL_LLM_PROCESSOR=http://localhost:18027 \
 MEM0_API_URL=http://127.0.0.1:18888 \
 MEM0_USER_ID=wingman \
@@ -711,6 +712,13 @@ MEM0_USER_ID=wingman \
 python3 ai-workers/scripts/wingman_orchestrator.py
 ```
 
+**Notes:**
+- By default the orchestrator **blocks potentially destructive TEST_PROCESS commands** (docker stop/down, rm, git reset/checkout). To override: add `--allow-destructive-test-commands`.
+- You can run a smaller subset first (recommended):
+  - `python3 ai-workers/scripts/wingman_orchestrator.py --workers WORKER_001 --batch-size 1`
+  - `python3 ai-workers/scripts/wingman_orchestrator.py --workers WORKER_001-010 --batch-size 10`
+  - `python3 ai-workers/scripts/wingman_orchestrator.py --dry-run --workers WORKER_001-010`
+
 **Validates (Per Worker):**
 1. Code generated (not guides)
 2. File written to DELIVERABLES path
@@ -733,8 +741,12 @@ python3 ai-workers/scripts/wingman_orchestrator.py
 
 1. **Execute E2E Test**
    ```bash
-   cd /Volumes/Data/ai_projects/wingman-system/wingman
+   # If you're at repo root, run: cd wingman
    source ai-workers/venv/bin/activate
+   OPENAI_API_KEY=$OPENAI_API_KEY \
+   INTEL_LLM_PROCESSOR=http://localhost:18027 \
+   MEM0_API_URL=http://127.0.0.1:18888 \
+   MEM0_USER_ID=wingman \
    python3 ai-workers/scripts/test_e2e.py
    ```
    - Validates: WORKER_001 + WORKER_013 pipeline
@@ -743,6 +755,7 @@ python3 ai-workers/scripts/wingman_orchestrator.py
 
 2. **If E2E Passes: Execute All 225 Workers**
    ```bash
+   # If you're at repo root, run: cd wingman
    python3 ai-workers/scripts/wingman_orchestrator.py
    ```
    - Duration: ~2 hours

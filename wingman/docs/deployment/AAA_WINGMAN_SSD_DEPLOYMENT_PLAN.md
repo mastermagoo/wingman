@@ -1,4 +1,9 @@
 # Wingman SSD Deployment Plan - Infrastructure Isolation
+**Status**: CURRENT  
+**Last Updated**: 2026-01-17  
+**Version**: 1.0  
+**Scope**: Wingman deployment documentation (DEV/TEST/PRD)  
+
 **Date:** 2026-01-10
 **Goal:** Deploy Wingman on separate SSD with true docker isolation
 **Purpose:** Pass TEST 0A-2 (AI cannot access Wingman docker)
