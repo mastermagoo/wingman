@@ -1,5 +1,10 @@
 # Wingman Operations Guide
 
+**Status**: CURRENT  
+**Last Updated**: 2026-01-17  
+**Version**: 1.0  
+**Scope**: Wingman operations/runbooks (DEV/TEST/PRD)  
+
 > **Audience**: System operators, DevOps, and anyone running Wingman day-to-day
 
 ---

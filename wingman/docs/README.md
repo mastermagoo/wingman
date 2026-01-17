@@ -4,13 +4,40 @@
 
 ---
 
+## Authoritative docs (AAA_*)
+
+**These are the definitive, current docs**. `README.md` files are only indexes/navigation.
+
+### Strategy + business (DEV/TEST/PRD)
+
+- **Business strategy / roadmap (master)**: [AAA_WINGMAN_STRATEGY_ROADMAP.md](./00-Strategic/AAA_WINGMAN_STRATEGY_ROADMAP.md)
+- **Business case (enforcement layer)**: [AAA_WINGMAN_ENFORCEMENT_BUSINESS_CASE.md](./00-Strategic/AAA_WINGMAN_ENFORCEMENT_BUSINESS_CASE.md)
+
+### Architecture (3 docs: current state, current build, gap/next)
+
+- **Current state (overall)**: [AAA_WINGMAN_ARCHITECTURE_CURRENT_STATE.md](./02-architecture/AAA_WINGMAN_ARCHITECTURE_CURRENT_STATE.md)
+- **Current build design (what is implemented now)**: [AAA_WINGMAN_ARCHITECTURE_CURRENT_BUILD.md](./02-architecture/AAA_WINGMAN_ARCHITECTURE_CURRENT_BUILD.md)
+- **Gap + what comes next (after current deployment)**: [AAA_WINGMAN_ARCHITECTURE_GAP_NEXT.md](./02-architecture/AAA_WINGMAN_ARCHITECTURE_GAP_NEXT.md)
+
+### Deployments & plans
+
+- **Deployment index (previous/current/future)**: [deployment/README.md](./deployment/README.md)
+- **Deployment record (what was deployed)**: [AAA_DEPLOYMENT_COMPLETE.md](./deployment/AAA_DEPLOYMENT_COMPLETE.md)
+- **PRD plan (Execution Gateway)**: [AAA_PRD_DEPLOYMENT_PLAN.md](./deployment/AAA_PRD_DEPLOYMENT_PLAN.md)
+
+### Document control standard
+
+- **Doc control rules (mandatory for new/edited docs)**: [AAA_DOCUMENT_CONTROL_STANDARD.md](./00-Strategic/AAA_DOCUMENT_CONTROL_STANDARD.md)
+
+---
+
 ## Quick Links
 
 | I want to... | Go to... |
 |--------------|----------|
 | Integrate my service with Wingman | [How to Use](./01-how-to-use/README.md) |
-| Understand how Wingman works | [Architecture](./02-architecture/README.md) |
-| Run/troubleshoot Wingman | [Operations](./03-operations/README.md) |
+| Understand how Wingman works | [Architecture (Current State)](./02-architecture/AAA_WINGMAN_ARCHITECTURE_CURRENT_STATE.md) |
+| Run/troubleshoot Wingman | [Operations Runbook](./03-operations/AAA_WINGMAN_OPERATIONS_DEPLOYMENT_RUNBOOK.md) |
 | Look up an API endpoint | [API Reference](./05-api-reference/README.md) |
 
 ---
@@ -31,6 +58,8 @@ These exist today, but were previously buried under the archive folder:
 docs/
 ├── README.md                    ← You are here
 │
+├── 00-Strategic/                ← Strategy, roadmap, business case (AAA_*)
+│
 ├── 01-how-to-use/               ← Integration guides
 │   ├── README.md                   Main guide + patterns
 │   ├── intel-system.md             Intel System integration
@@ -39,13 +68,15 @@ docs/
 │   └── wingman_client.py           Reusable Python client
 │
 ├── 02-architecture/             ← System design
-│   └── README.md                   Current state, components, roadmap
+│   └── AAA_*.md                    Authoritative architecture docs
 │
 ├── 03-operations/               ← Running Wingman
-│   └── README.md                   Start/stop, logs, troubleshooting
+│   └── AAA_*.md                    Operator runbooks
 │
 ├── 05-api-reference/            ← API documentation
 │   └── README.md                   All endpoints, request/response
+│
+├── deployment/                  ← Deployment plans + deployment records (AAA_*)
 │
 └── 99-archive/                  ← Legacy documentation
     └── paul-wingman/               Original docs (pre-migration)
@@ -63,8 +94,8 @@ docs/
 
 ### For Operators (Running Wingman)
 
-1. Read [Operations](./03-operations/README.md) for day-to-day commands
-2. Check [Architecture](./02-architecture/README.md) for system overview
+1. Read [Operations Runbook](./03-operations/AAA_WINGMAN_OPERATIONS_DEPLOYMENT_RUNBOOK.md) for day-to-day commands
+2. Check [Architecture (Current State)](./02-architecture/AAA_WINGMAN_ARCHITECTURE_CURRENT_STATE.md) for system overview
 3. See [API Reference](./05-api-reference/README.md) for testing endpoints
 
 ---
@@ -123,8 +154,8 @@ docs/
 | File | Purpose |
 |------|---------|
 | `CLAUDE.md` | AI agent instructions |
-| `DEPLOYMENT_PLAN.md` | Master deployment roadmap |
-| `DEPLOYMENT_COMPLETE.md` | Execution log |
+| `docs/00-Strategic/AAA_WINGMAN_STRATEGY_ROADMAP.md` | Master strategy/roadmap (DEV/TEST/PRD) |
+| `docs/deployment/AAA_DEPLOYMENT_COMPLETE.md` | Deployment record (what was deployed) |
 | `QUICK_START.md` | Quick deployment reference |
 | `README.md` (root) | Project overview |
 
