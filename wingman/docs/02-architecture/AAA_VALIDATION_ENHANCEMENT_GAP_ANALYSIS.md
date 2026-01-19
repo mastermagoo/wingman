@@ -39,7 +39,9 @@ This analysis reveals **3 critical gaps** preventing delivery:
 
 **Evidence (repo state on `test`)**:
 - `wingman/validation/` contains only `__init__.py` (51 lines) and `__pycache__/`.
-- `python3 -c "import validation"` fails (`validation_import_ok=no`), because `__init__.py` imports modules that do not exist.
+- Import behavior depends on working directory:
+  - From repo root: `python3 -c "import validation"` fails (`root_import_ok=no`) because `validation` is not on `sys.path` by default.
+  - From `wingman/` directory: `python3 -c "import validation"` succeeds (`wingman_import_ok`), and `validation.__all__` is currently empty.
 
 ### 1.2 Existing Utility Files
 
