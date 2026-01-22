@@ -51,14 +51,21 @@ Implement the 4 core validators that transform Wingman from "presence checks" to
 **Tasks**:
 1. Create `validation/semantic_analyzer.py` (~250-300 lines)
 2. Implement LLM integration:
-   - Connect to `INTEL_LLM_PROCESSOR` (http://127.0.0.1:18027)
-   - Use Mistral 7B for semantic analysis
+   - Connect to host Ollama via `host.docker.internal:11434` (or direct `ollama run` from container)
+   - **Recommended model**: `qwen2.5:3b` (1.9GB, fastest) or `llama3.1:8b-instruct-q4_K_M` (4.9GB, newer quantized)
+   - **Fallback**: `mistral:7b-instruct-q4_K_M` (4.4GB quantized) if smaller models insufficient
    - Prompt engineering for risk detection
    - JSON output parsing with retry logic
 3. Implement fallback to heuristic if LLM times out
 4. Detect HIGH risk even if labeled "low" (e.g., "docker restart" on PRD)
 5. Write unit tests (10+ test cases, including LLM timeout scenarios)
 6. Integration test with approval flow
+
+**Model Selection Rationale**:
+- **qwen2.5:3b**: Smallest (1.9GB), fastest response, sufficient for risk classification
+- **llama3.1:8b-instruct-q4_K_M**: Newer quantized model, better instruction following
+- **mistral:7b-instruct-q4_K_M**: Quantized version, fallback if smaller models insufficient
+- **Avoid**: Full `mistral:7b` (4.4GB unquantized) - OTT for validation tasks
 
 **Deliverable**: `semantic_analyzer.py` with LLM integration and fallback
 
@@ -76,13 +83,14 @@ Implement the 4 core validators that transform Wingman from "presence checks" to
 **Tasks**:
 1. Create `validation/dependency_analyzer.py` (~250-300 lines)
 2. Implement LLM-based dependency analysis:
+   - Use same LLM integration pattern as semantic analyzer
+   - **Recommended model**: `qwen2.5:3b` or `llama3.1:8b-instruct-q4_K_M` (quantized, faster)
    - Identify affected services from instruction text
    - Calculate blast radius (LOW/MEDIUM/HIGH)
    - Detect cascading failure risks
    - Single point of failure detection
-3. Use same LLM integration pattern as semantic analyzer
-4. Write unit tests (10+ test cases)
-5. Integration test with approval flow
+3. Write unit tests (10+ test cases)
+4. Integration test with approval flow
 
 **Deliverable**: `dependency_analyzer.py` with blast radius assessment
 
@@ -98,6 +106,8 @@ Implement the 4 core validators that transform Wingman from "presence checks" to
 **Tasks**:
 1. Create `validation/content_quality_validator.py` (~300-350 lines)
 2. Implement LLM-based quality assessment:
+   - Use same LLM integration pattern as semantic analyzer
+   - **Recommended model**: `llama3.1:8b-instruct-q4_K_M` (better for multi-section scoring) or `qwen2.5:3b` (faster)
    - Score each 10-point section (0-10)
    - Detect vague language ("do it", "make it work")
    - Verify measurable success criteria
@@ -194,10 +204,14 @@ Implement the 4 core validators that transform Wingman from "presence checks" to
   - Fallback: Use direct Ollama if processor unavailable
 
 ### External Dependencies
-- Mistral 7B model available ✅ (via Ollama direct)
-- Ollama available ✅ (validators use `ollama run mistral` directly)
+- **LLM Models Available**:
+  - ✅ `qwen2.5:3b` (1.9GB) - Recommended for validation (fastest, sufficient accuracy)
+  - ✅ `llama3.1:8b-instruct-q4_K_M` (4.9GB) - Recommended alternative (newer, better instruction following)
+  - ✅ `mistral:7b-instruct-q4_K_M` (4.4GB) - Fallback (quantized Mistral)
+  - ⚠️ Avoid: `mistral:7b` (unquantized, OTT for validation tasks)
+- **Ollama Environment**: Host Ollama (port 11434), accessed via `host.docker.internal:11434` from containers
 - TEST API running ✅
-- LLM validation complete ✅ (response time: avg 1.62s, max 6.16s, all <30s)
+- LLM validation complete ✅ (tested with Mistral, but qwen2.5:3b recommended for production)
 
 ---
 
