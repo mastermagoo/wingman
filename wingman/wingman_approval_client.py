@@ -33,10 +33,11 @@ class WingmanApprovalClient:
         Initialize client.
         
         Args:
-            api_url: Wingman API URL (defaults to WINGMAN_API_URL env var)
+            api_url: Wingman API URL (explicit override; if None, will be resolved from env vars based on deployment_env)
             api_key: Approval request key (defaults to WINGMAN_APPROVAL_REQUEST_KEY env var)
         """
-        self.api_url = (api_url or os.getenv("WINGMAN_API_URL", "http://127.0.0.1:5001")).rstrip("/")
+        # Store explicit override (highest priority) or None for dynamic resolution
+        self._api_url_override = api_url.rstrip("/") if api_url else None
         self.api_key = api_key or os.getenv("WINGMAN_APPROVAL_REQUEST_KEY", "")
         
         self.headers = {"Content-Type": "application/json"}
@@ -46,6 +47,49 @@ class WingmanApprovalClient:
         # Polling configuration
         self.poll_interval = float(os.getenv("WINGMAN_APPROVAL_POLL_SEC", "2.0"))
         self.timeout_sec = float(os.getenv("WINGMAN_APPROVAL_TIMEOUT_SEC", "3600"))
+    
+    def _resolve_api_url(self, deployment_env: str = "test") -> str:
+        """
+        Resolve the correct API URL based on deployment environment.
+        
+        Priority (highest to lowest):
+        1. Explicit api_url override (passed to __init__)
+        2. WINGMAN_API_URL_TEST (if deployment_env="test")
+        3. WINGMAN_API_URL_PRD (if deployment_env="prd")
+        4. WINGMAN_API_URL (fallback)
+        5. Default PRD URL (http://127.0.0.1:5001)
+        
+        This ensures cold restart capability: env vars persist in .env files.
+        
+        Args:
+            deployment_env: Environment name (test/prd)
+            
+        Returns:
+            Resolved API URL string
+        """
+        # Priority 1: Explicit override
+        if self._api_url_override:
+            return self._api_url_override
+        
+        env_lower = (deployment_env or "").strip().lower()
+        
+        # Priority 2-3: Environment-specific URLs
+        if env_lower == "test":
+            test_url = os.getenv("WINGMAN_API_URL_TEST", "").strip()
+            if test_url:
+                return test_url.rstrip("/")
+        elif env_lower in ("prd", "prod", "production"):
+            prd_url = os.getenv("WINGMAN_API_URL_PRD", "").strip()
+            if prd_url:
+                return prd_url.rstrip("/")
+        
+        # Priority 4: Generic fallback
+        generic_url = os.getenv("WINGMAN_API_URL", "").strip()
+        if generic_url:
+            return generic_url.rstrip("/")
+        
+        # Priority 5: Default (PRD)
+        return "http://127.0.0.1:5001"
     
     def request_approval(
         self,
@@ -70,14 +114,18 @@ class WingmanApprovalClient:
         """
         timeout = timeout_sec or self.timeout_sec
         
+        # Resolve API URL based on deployment environment (cold restart capable)
+        api_url = self._resolve_api_url(deployment_env)
+        
         print(f"\n🧑‍⚖️  WINGMAN APPROVAL: Requesting decision...")
         print(f"   Task: {task_name}")
         print(f"   Environment: {deployment_env}")
+        print(f"   API: {api_url}")
         
         try:
             # Submit request
             response = requests.post(
-                f"{self.api_url}/approvals/request",
+                f"{api_url}/approvals/request",
                 headers=self.headers,
                 json={
                     "worker_id": worker_id,
@@ -118,9 +166,9 @@ class WingmanApprovalClient:
                 attempt += 1
                 time.sleep(self.poll_interval)
                 
-                # Check status
+                # Check status (use same API URL as request)
                 status_resp = requests.get(
-                    f"{self.api_url}/approvals/{request_id}",
+                    f"{api_url}/approvals/{request_id}",
                     headers=self.headers,
                     timeout=10,
                 )
@@ -157,19 +205,23 @@ class WingmanApprovalClient:
             print(f"   ❌ Approval flow failed: {e}")
             return False
     
-    def get_approval_status(self, request_id: str) -> Optional[Dict[str, Any]]:
+    def get_approval_status(self, request_id: str, deployment_env: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Get status of an approval request.
         
         Args:
             request_id: Approval request ID
+            deployment_env: Environment (test/prd) - required if not using explicit api_url override
             
         Returns:
             Dict with status info, or None if error
         """
+        # Resolve API URL (use provided env or fallback to test)
+        api_url = self._resolve_api_url(deployment_env or "test")
+        
         try:
             response = requests.get(
-                f"{self.api_url}/approvals/{request_id}",
+                f"{api_url}/approvals/{request_id}",
                 headers=self.headers,
                 timeout=10,
             )
@@ -191,6 +243,10 @@ def request_approval(
 ) -> bool:
     """
     Convenience function to request approval.
+    
+    Automatically selects API URL based on deployment_env:
+    - test -> WINGMAN_API_URL_TEST (default: http://127.0.0.1:8101)
+    - prd -> WINGMAN_API_URL_PRD (default: http://127.0.0.1:5001)
     
     Usage:
         if request_approval("my-script", "Stop containers", "...", "prd"):
