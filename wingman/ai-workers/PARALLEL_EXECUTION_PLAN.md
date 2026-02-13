@@ -1,8 +1,10 @@
 # PARALLEL EXECUTION PLAN - Maximum Efficiency
 
 **Date**: 2026-01-13
-**Status**: READY FOR EXECUTION
-**Optimization**: Parallel batches + Cost-optimized LLM allocation
+**Status**: UPDATED — Phase-gated execution (do not run full batches)
+**Optimization**: Phase-by-phase delivery + safe parallelism (no file collisions)
+**Note**: This file has legacy sections (see ARCHIVED)
+<!-- last patched -->
 
 ---
 
@@ -13,10 +15,10 @@
 - **Time wasted**: ~2 hours (could have run all 3 in parallel)
 - **Lesson**: Independent workers should ALWAYS run in parallel
 
-### What We're Doing Right Now
-✅ **Parallel batch execution**: Run 50 workers simultaneously
-✅ **Cost optimization**: Removed Claude API (68 workers → OpenAI)
-✅ **API tier optimization**: Using only 2.03% of OpenAI capacity
+### What We're Doing Right Now (Agreed Approach)
+✅ **Phase-gated delivery**: build → test → deploy(TEST) → evidence → review (one capability at a time)
+✅ **Current phase**: **Phase 1A — Semantic Analyzer only** (WORKER_001–018)
+✅ **Safe execution**: parallelize only when workers write to disjoint files (Semantic Analyzer is mostly sequential)
 
 ---
 
@@ -41,6 +43,47 @@
 
 ## PARALLEL EXECUTION STRATEGY
 
+## DELIVERY AGREEMENT (QUALITY FIRST)
+
+Execution is **phase-gated by functional capability**.
+
+- **Unit of delivery**: one capability at a time (e.g., **Semantic Analyzer only**).
+- **Per-phase gate**: **build → test → deploy (TEST)** with evidence, then review. Only then proceed.
+- **No cross-phase batching**: do not mix workers from multiple capabilities in the same run (and do not touch deployment/tuning workers until the current capability has proven quality).
+- **No file-collision parallelism**: parallelize only when workers write to **disjoint deliverables** (avoid concurrent edits to the same module/test file).
+
+---
+
+## CURRENT DELIVERY: PHASE 1A — Semantic Analyzer (ONLY)
+
+### Scope (this phase only)
+- **Worker subset**: WORKER_001–018
+- **Primary deliverable (code)**: `validation/semantic_analyzer.py`
+- **Primary deliverable (tests)**: `tests/validation/test_semantic_analyzer.py`
+
+### Required deliverables (what “done” means)
+- **Importable module**: `python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; print('ok')"`
+- **Unit tests green**: `pytest -q tests/validation/test_semantic_analyzer.py`
+- **LLM safety**: any Ollama call must use shared host Ollama (`OLLAMA_HOST`/`OLLAMA_PORT`) and must timeout safely (no hangs)
+
+### Execution ordering (avoid file collisions)
+- **WORKER_001–012** all modify `validation/semantic_analyzer.py` → **run sequentially**
+- **WORKER_013–018** all modify `tests/validation/test_semantic_analyzer.py` → **run sequentially after 001–012**
+
+### Deploy to TEST (approval-gated; destructive)
+Any container rebuild/restart is a destructive operation and must go through Wingman approval gates before running:
+
+```bash
+docker compose -f docker-compose.yml -p wingman-test up -d --build wingman-api
+```
+
+---
+
+## ARCHIVED (REFERENCE ONLY): Full end-to-end parallel plan
+
+The sections below are an end-to-end reference for a future “run everything” pass.
+Do **not** execute them until each functional phase has been completed and accepted.
+
 ### Batch Size Optimization
 
 **Maximum Parallel Workers**: 50 workers per batch
@@ -48,7 +91,10 @@
 - **Safe rate**: 50 workers × 0.6s interval = 83 requests/min (well under limit)
 - **Buffer**: 5x safety margin for burst tolerance
 
-### Execution Batches (5 batches total)
+### Execution Batches (full-system reference; run only after per-phase sign-off)
+
+The batch lists below are a **speed-optimized reference** for the eventual end-to-end run.
+Given the agreement above, we will execute **only the subset of workers for the current capability**, complete build/tests, deploy to TEST, and stop for quality review before moving on.
 
 **Batch 1: Structure Workers (45 workers, 15 min)**
 - WORKER_001-018: Semantic Analyzer structure (18 workers)

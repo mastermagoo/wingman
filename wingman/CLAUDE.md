@@ -78,6 +78,16 @@ This repository contains the Wingman system and its Docker deployment stacks.
 - `docker-compose-wingman.yml`: legacy/alternate compose (do not assume it is active unless explicitly used)
 - `docs/`: design and operational references (do not copy sensitive content into runtime configs)
 
+## Use the docker wrapper everywhere (mandatory)
+- **All** docker invocations (scripts, terminals, cron, agents) MUST go through the wrapper so destructive commands are blocked unless executed via Wingman approval + Execution Gateway.
+- **Setup**: Prepend `wingman/tools` to PATH so that `docker` resolves to the wrapper:
+  ```bash
+  export PATH="/path/to/wingman/tools:$PATH"
+  ```
+  Optionally set `DOCKER_BIN` to the real docker binary path if the wrapper’s fallback search fails (e.g. `export DOCKER_BIN=/usr/local/bin/docker`).
+- **Environments**: Use this in every environment where docker may be run (local shell profile, CI, IDE terminal). No bypass: scripts must not call the real docker binary directly for destructive operations.
+- Wrapper script: `tools/docker-wrapper.sh`; shim: `tools/docker` (invoked when `docker` is run with tools first in PATH).
+
 ## Docker Compose conventions
 - Always use Compose v2:
 

@@ -1,0 +1,39 @@
+{
+  "worker_id": "WORKER_002",
+  "worker_name": "Semantic Ollama Client",
+  "status": "failed",
+  "deliverables_created": [
+    "validation/semantic_analyzer.py"
+  ],
+  "test_results": {
+    "all_passed": false,
+    "tests": [
+      {
+        "command": "python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, '_test_ollama_connection'); print('PASS: Method exists')\"",
+        "passed": false,
+        "output": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, '_test_ollama_connection'); print('PASS: Method exists')\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\n    import requests\nModuleNotFoundError: No module named 'requests'\n"
+      },
+      {
+        "command": "python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._test_ollama_connection(); assert isinstance(result, bool); print(f'PASS: Returns bool ({result})')\"",
+        "passed": false,
+        "output": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._test_ollama_connection(); assert isinstance(result, bool); print(f'PASS: Returns bool ({result})')\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\n    import requests\nModuleNotFoundError: No module named 'requests'\n"
+      },
+      {
+        "command": "docker exec wingman-test-ollama-1 ollama list && python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(ollama_endpoint='http://ollama:11434'); assert s._test_ollama_connection() == True; print('PASS: Ollama connection successful')\"",
+        "passed": false,
+        "output": "Error response from daemon: No such container: wingman-test-ollama-1\n"
+      },
+      {
+        "command": "python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(ollama_endpoint='http://invalid:11434'); assert s._test_ollama_connection() == False; print('PASS: Invalid endpoint handled gracefully')\"",
+        "passed": false,
+        "output": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(ollama_endpoint='http://invalid:11434'); assert s._test_ollama_connection() == False; print('PASS: Invalid endpoint handled gracefully')\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\n    import requests\nModuleNotFoundError: No module named 'requests'\n"
+      }
+    ]
+  },
+  "duration_seconds": 8.271468,
+  "timestamp": "2026-02-04T16:46:51.549070",
+  "llm_provider": "openai",
+  "errors": [
+    "Validation failed: {'all_passed': False, 'tests': [{'command': 'python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, \\'_test_ollama_connection\\'); print(\\'PASS: Method exists\\')\"', 'passed': False, 'output': 'Traceback (most recent call last):\\n  File \"<string>\", line 1, in <module>\\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, \\'_test_ollama_connection\\'); print(\\'PASS: Method exists\\')\\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\\n    import requests\\nModuleNotFoundError: No module named \\'requests\\'\\n'}, {'command': 'python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._test_ollama_connection(); assert isinstance(result, bool); print(f\\'PASS: Returns bool ({result})\\')\"', 'passed': False, 'output': 'Traceback (most recent call last):\\n  File \"<string>\", line 1, in <module>\\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._test_ollama_connection(); assert isinstance(result, bool); print(f\\'PASS: Returns bool ({result})\\')\\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\\n    import requests\\nModuleNotFoundError: No module named \\'requests\\'\\n'}, {'command': 'docker exec wingman-test-ollama-1 ollama list && python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(ollama_endpoint=\\'http://ollama:11434\\'); assert s._test_ollama_connection() == True; print(\\'PASS: Ollama connection successful\\')\"', 'passed': False, 'output': 'Error response from daemon: No such container: wingman-test-ollama-1\\n'}, {'command': 'python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(ollama_endpoint=\\'http://invalid:11434\\'); assert s._test_ollama_connection() == False; print(\\'PASS: Invalid endpoint handled gracefully\\')\"', 'passed': False, 'output': 'Traceback (most recent call last):\\n  File \"<string>\", line 1, in <module>\\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(ollama_endpoint=\\'http://invalid:11434\\'); assert s._test_ollama_connection() == False; print(\\'PASS: Invalid endpoint handled gracefully\\')\\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\\n    import requests\\nModuleNotFoundError: No module named \\'requests\\'\\n'}]}"
+  ]
+}

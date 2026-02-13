@@ -10,7 +10,7 @@
 
 ## 1. DELIVERABLES
 
-- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
+- [ ] Create/update file: `validation/semantic_analyzer.py`
 - [ ] Add Ollama client setup in `SemanticAnalyzer.__init__`
 - [ ] Implement `_test_ollama_connection()` method
 - [ ] Add connection validation with timeout (10 seconds)
@@ -63,7 +63,7 @@ docker exec wingman-test-ollama-1 ollama list
 - **If Ollama unavailable:** Return False from connection test, log warning (do not fail)
 - **If timeout:** Return False, log "Ollama connection timeout after 10s"
 - **If network error:** Return False, log error message
-- **Rollback:** `git checkout wingman/validation/semantic_analyzer.py` (restore WORKER_001 version)
+- **Rollback:** `git checkout validation/semantic_analyzer.py` (restore WORKER_001 version)
 - **Escalation:** If Ollama service missing entirely, escalate to human (required dependency)
 - **Risk Level:** LOW (read-only connection test, graceful failure)
 
@@ -73,16 +73,16 @@ docker exec wingman-test-ollama-1 ollama list
 
 ```bash
 # Test 1: Connection test method exists
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, '_test_ollama_connection'); print('PASS: Method exists')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, '_test_ollama_connection'); print('PASS: Method exists')"
 
 # Test 2: Connection test returns boolean
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._test_ollama_connection(); assert isinstance(result, bool); print(f'PASS: Returns bool ({result})')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._test_ollama_connection(); assert isinstance(result, bool); print(f'PASS: Returns bool ({result})')"
 
 # Test 3: Connection test with Ollama running (expect True)
-docker exec wingman-test-ollama-1 ollama list && cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(ollama_endpoint='http://ollama:11434'); assert s._test_ollama_connection() == True; print('PASS: Ollama connection successful')"
+docker exec wingman-test-ollama-1 ollama list && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(ollama_endpoint='http://ollama:11434'); assert s._test_ollama_connection() == True; print('PASS: Ollama connection successful')"
 
 # Test 4: Connection test with invalid endpoint (expect False)
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(ollama_endpoint='http://invalid:11434'); assert s._test_ollama_connection() == False; print('PASS: Invalid endpoint handled gracefully')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(ollama_endpoint='http://invalid:11434'); assert s._test_ollama_connection() == False; print('PASS: Invalid endpoint handled gracefully')"
 ```
 
 ---
@@ -112,7 +112,40 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 8. TASK_CLASSIFICATION
+## 8. RESOURCE_REQUIREMENTS
+
+- **Time:** 20 minutes
+- **Compute:** Local Python 3.9+ interpreter
+- **Memory:** <10 MB
+- **Storage:** <1 KB
+- **Network:** Localhost connection to Ollama (optional for tests)
+- **External Services:** None (Ollama optional)
+- **Environment:** Python 3.9+ with standard library
+
+---
+
+## 9. RISK_ASSESSMENT
+
+- **Risk Level:** LOW
+- **Impact if Failed:** Semantic analyzer cannot connect to LLM (falls back to heuristics)
+- **Probability of Failure:** <10% (Add Ollama client method)
+- **Blast Radius:** Add Ollama client method only
+- **Data Loss Risk:** None (code changes only)
+- **Rollback Complexity:** Simple (git checkout)
+- **Service Disruption:** None (no running services affected)
+
+---
+
+## 10. QUALITY_METRICS
+
+- **Test Pass Rate:** All tests must pass (100%)
+- **Code Quality:** PEP 8 compliant, type hints present
+- **Documentation:** Docstrings present for all public methods
+- **Functionality:** Semantic analyzer Ollama connectivity works as specified
+
+---
+
+## 11. TASK_CLASSIFICATION
 
 - **Type:** MECHANICAL
 - **Tool:** Python (requests library)
@@ -122,7 +155,7 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 9. RETROSPECTIVE
+## 12. RETROSPECTIVE
 
 - **Time estimate:** 20 minutes
 - **Actual time:** [To be filled after execution]
@@ -135,7 +168,7 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 10. PERFORMANCE_REQUIREMENTS
+## 13. PERFORMANCE_REQUIREMENTS
 
 **Baseline:**
 - Manual execution time: 15 minutes (write connection test, test with Ollama)

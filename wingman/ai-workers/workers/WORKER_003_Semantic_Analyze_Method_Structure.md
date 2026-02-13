@@ -10,7 +10,7 @@
 
 ## 1. DELIVERABLES
 
-- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
+- [ ] Create/update file: `validation/semantic_analyzer.py`
 - [ ] Implement `analyze(instruction: str) -> Dict[str, Any]` method signature
 - [ ] Add input validation (instruction length, empty check)
 - [ ] Add method docstring with return type specification
@@ -68,7 +68,7 @@ def analyze(self, instruction: str) -> Dict[str, Any]:
 
 - **If type hints fail:** Verify Python 3.9+ (type hints required)
 - **If validation too strict:** Log warning, continue processing
-- **Rollback:** `git checkout wingman/validation/semantic_analyzer.py` (restore WORKER_002 version)
+- **Rollback:** `git checkout validation/semantic_analyzer.py` (restore WORKER_002 version)
 - **Escalation:** If Python version <3.9, escalate (type hints not supported)
 - **Risk Level:** MINIMAL (pure Python logic, no external calls)
 
@@ -78,19 +78,19 @@ def analyze(self, instruction: str) -> Dict[str, Any]:
 
 ```bash
 # Test 1: Method exists
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, 'analyze'); print('PASS: Method exists')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, 'analyze'); print('PASS: Method exists')"
 
 # Test 2: Empty string rejected
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); import sys; s.analyze(''); sys.exit(0)" 2>&1 | grep -q "ValueError" && echo "PASS: Empty string rejected" || echo "FAIL: Empty string not rejected"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); import sys; s.analyze(''); sys.exit(0)" 2>&1 | grep -q "ValueError" && echo "PASS: Empty string rejected" || echo "FAIL: Empty string not rejected"
 
 # Test 3: Too long rejected (>10k chars)
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); import sys; s.analyze('x'*10001); sys.exit(0)" 2>&1 | grep -q "ValueError" && echo "PASS: Too long rejected" || echo "FAIL: Too long not rejected"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); import sys; s.analyze('x'*10001); sys.exit(0)" 2>&1 | grep -q "ValueError" && echo "PASS: Too long rejected" || echo "FAIL: Too long not rejected"
 
 # Test 4: Valid instruction returns dict
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s.analyze('Test instruction'); assert isinstance(result, dict); print('PASS: Returns dict')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s.analyze('Test instruction'); assert isinstance(result, dict); print('PASS: Returns dict')"
 
 # Test 5: Required keys present
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s.analyze('Test'); keys = ['risk_level', 'operation_types', 'blast_radius', 'reasoning', 'confidence']; assert all(k in result for k in keys); print('PASS: All required keys present')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s.analyze('Test'); keys = ['risk_level', 'operation_types', 'blast_radius', 'reasoning', 'confidence']; assert all(k in result for k in keys); print('PASS: All required keys present')"
 ```
 
 ---
@@ -120,7 +120,40 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 8. TASK_CLASSIFICATION
+## 8. RESOURCE_REQUIREMENTS
+
+- **Time:** 20 minutes
+- **Compute:** Local Python 3.9+ interpreter
+- **Memory:** <10 MB
+- **Storage:** <1 KB
+- **Network:** None
+- **External Services:** None
+- **Environment:** Python 3.9+ with standard library
+
+---
+
+## 9. RISK_ASSESSMENT
+
+- **Risk Level:** LOW
+- **Impact if Failed:** Semantic analyzer cannot process instructions
+- **Probability of Failure:** <5% (Implement analyze() method structure)
+- **Blast Radius:** Implement analyze() method structure only
+- **Data Loss Risk:** None (code changes only)
+- **Rollback Complexity:** Simple (git checkout)
+- **Service Disruption:** None (no running services affected)
+
+---
+
+## 10. QUALITY_METRICS
+
+- **Test Pass Rate:** All tests must pass (100%)
+- **Code Quality:** PEP 8 compliant, type hints present
+- **Documentation:** Docstrings present for all public methods
+- **Functionality:** Semantic analyzer core method works as specified
+
+---
+
+## 11. TASK_CLASSIFICATION
 
 - **Type:** MECHANICAL
 - **Tool:** Python method implementation
@@ -130,7 +163,7 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 9. RETROSPECTIVE
+## 12. RETROSPECTIVE
 
 - **Time estimate:** 20 minutes
 - **Actual time:** [To be filled after execution]
@@ -143,7 +176,7 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 10. PERFORMANCE_REQUIREMENTS
+## 13. PERFORMANCE_REQUIREMENTS
 
 **Baseline:**
 - Manual execution time: 15 minutes (write method, add validation, test)

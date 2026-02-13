@@ -1,0 +1,24 @@
+{
+  "worker_id": "WORKER_013",
+  "worker_name": "Semantic Tests Clarity",
+  "status": "failed",
+  "deliverables_created": [
+    "tests/validation/test_semantic_analyzer.py"
+  ],
+  "test_results": {
+    "all_passed": false,
+    "tests": [
+      {
+        "command": "pytest tests/validation/test_semantic_analyzer.py -v",
+        "passed": false,
+        "output": ""
+      }
+    ]
+  },
+  "duration_seconds": 14.190897,
+  "timestamp": "2026-02-04T16:56:21.478858",
+  "llm_provider": "openai",
+  "errors": [
+    "Validation failed: {'all_passed': False, 'tests': [{'command': 'pytest tests/validation/test_semantic_analyzer.py -v', 'passed': False, 'output': ''}]}"
+  ]
+}

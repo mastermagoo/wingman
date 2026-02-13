@@ -1,11 +1,19 @@
 """
 Wingman Validation package.
 
-Important: this package must remain import-safe even when validator modules are not yet present.
-
-Status (repo reality on `test` as of 2026-01-19):
-- Validator modules under `wingman/validation/` are missing (semantic/code/dependency/content/composite).
-- This `__init__.py` therefore MUST NOT import those modules at import-time.
+Exposes the four validators and the composite validator for instruction checking.
 """
 
-__all__ = []
+from validation.code_scanner import CodeScanner
+from validation.content_quality_validator import ContentQualityValidator
+from validation.dependency_analyzer import DependencyAnalyzer
+from validation.semantic_analyzer import SemanticAnalyzer
+from validation.composite_validator import CompositeValidator
+
+__all__ = [
+    "CodeScanner",
+    "ContentQualityValidator",
+    "DependencyAnalyzer",
+    "SemanticAnalyzer",
+    "CompositeValidator",
+]

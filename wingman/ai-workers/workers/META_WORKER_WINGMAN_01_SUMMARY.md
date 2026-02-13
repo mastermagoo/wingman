@@ -3,7 +3,7 @@
 **Date:** 2026-01-13
 **Meta-Worker:** WINGMAN-01
 **Focus:** Phase 1 - Core Validators (Semantic Analyzer, Code Scanner, Dependency Analyzer)
-**Status:** ✅ COMPLETE - Ready for Wingman Approval
+**Status:** ✅ COMPLETE - Ready for Phase 1A (Semantic Analyzer) instruction quality gate
 
 ---
 
@@ -28,7 +28,7 @@
 - **WORKER_005**: Semantic_Reasoning_Dict - Reasoning dict structure + JSON schema
 - **WORKER_006**: Semantic_Error_Handling - Error handling (timeout, invalid JSON, connection)
 
-**Deliverable:** `wingman/validation/semantic_analyzer.py` with complete structure
+**Deliverable:** `validation/semantic_analyzer.py` with complete structure
 
 #### Prompt Engineering (6 workers: 007-012)
 - **WORKER_007**: Semantic_Clarity_Prompt - Clarity scoring prompt template
@@ -48,7 +48,7 @@
 - **WORKER_017**: Semantic_Tests_Error_Handling - Tests 18-21 (timeout/invalid JSON/retry/fallback)
 - **WORKER_018**: Semantic_Tests_Integration - Tests 22-23 (score range/performance benchmark)
 
-**Deliverable:** `wingman/tests/test_semantic_analyzer.py` - 23 tests
+**Deliverable:** `tests/validation/test_semantic_analyzer.py` - 23 tests
 
 ---
 
@@ -145,9 +145,9 @@
   - Integration: 5 tests
 
 ### Test Files Created
-1. `wingman/tests/test_semantic_analyzer.py` (23 tests)
-2. `wingman/tests/test_code_scanner.py` (20 tests)
-3. `wingman/tests/test_dependency_analyzer.py` (20 tests)
+1. `tests/validation/test_semantic_analyzer.py` (23 tests)
+2. `tests/validation/test_code_scanner.py` (20 tests)
+3. `tests/validation/test_dependency_analyzer.py` (20 tests)
 
 ---
 
@@ -159,11 +159,10 @@ Execute workers in order 001-054, validating each before proceeding:
 ```bash
 # Example: Execute WORKER_001
 cd /Volumes/Data/ai_projects/wingman-system/wingman
-# Read instruction file
-cat ai-workers/workers/WORKER_001_Semantic_Class_Skeleton.md
-# Submit to Wingman for approval
-# Execute after approval
-# Store retrospective in mem0
+# 1) Quality-gate the instruction via Wingman /check (NO approval spam)
+# 2) Execute the worker (code + tests)
+# 3) Capture evidence (pytest output, import check)
+# 4) Deploy to TEST only when the phase is complete (approval-gated destructive ops)
 ```
 
 ### Parallel Execution (Recommended for Production)
@@ -193,7 +192,7 @@ Execute workers in parallel batches by component:
 - [x] All files have complete 10-point framework
 - [x] All 63 Phase 1 tests covered
 - [x] Summary file created
-- [ ] All workers submitted to Wingman for approval (≥80% score)
+- [ ] Phase 1A worker instructions pass Wingman /check quality gate
 - [ ] Ready for execution by AI workers
 
 ### Individual Worker Success Criteria
@@ -203,7 +202,7 @@ Each worker must:
 - ✅ Include exact file paths, function names, test commands
 - ✅ Define clear success criteria
 - ✅ Specify rollback procedures
-- [ ] Score ≥80% when submitted to Wingman for approval
+- [ ] Pass Wingman /check quality gate
 
 ---
 

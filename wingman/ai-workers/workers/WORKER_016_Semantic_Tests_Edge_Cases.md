@@ -10,7 +10,7 @@
 
 ## 1. DELIVERABLES
 
-- [ ] Create/update file: `wingman/tests/test_semantic_analyzer.py`
+- [ ] Create/update file: `tests/validation/test_semantic_analyzer.py`
 - [ ] Tests 13-17: Edge cases (empty/single word/10K chars/special chars/multi-language)
 - [ ] Test results file: `ai-workers/results/worker-016-results.json`
 
@@ -61,7 +61,7 @@
 
 ```bash
 # Validation command for WORKER_016
-cd wingman && pytest tests/test_semantic_analyzer.py -v
+pytest tests/validation/test_semantic_analyzer.py -v
 
 
 
@@ -91,7 +91,40 @@ cd wingman && pytest tests/test_semantic_analyzer.py -v
 
 ---
 
-## 8. TASK_CLASSIFICATION
+## 8. RESOURCE_REQUIREMENTS
+
+- **Time:** 20 minutes
+- **Compute:** Local Python 3.9+ interpreter
+- **Memory:** <50 MB
+- **Storage:** <10 KB
+- **Network:** Localhost to Ollama (if integration tests)
+- **External Services:** pytest, Ollama (optional)
+- **Environment:** Python 3.9+ with standard library
+
+---
+
+## 9. RISK_ASSESSMENT
+
+- **Risk Level:** LOW
+- **Impact if Failed:** Edge cases may fail in production
+- **Probability of Failure:** <10% (Write edge case tests)
+- **Blast Radius:** Write edge case tests only
+- **Data Loss Risk:** None (code changes only)
+- **Rollback Complexity:** Simple (git checkout)
+- **Service Disruption:** None (no running services affected)
+
+---
+
+## 10. QUALITY_METRICS
+
+- **Test Pass Rate:** All tests must pass (100%)
+- **Code Quality:** PEP 8 compliant, type hints present
+- **Documentation:** Docstrings present for all public methods
+- **Functionality:** Semantic analyzer edge case handling works as specified
+
+---
+
+## 11. TASK_CLASSIFICATION
 
 - **Type:** MECHANICAL
 - **Tool:** pytest
@@ -100,7 +133,7 @@ cd wingman && pytest tests/test_semantic_analyzer.py -v
 
 ---
 
-## 9. RETROSPECTIVE
+## 12. RETROSPECTIVE
 
 - **Time estimate:** 20 minutes
 - **Actual time:** [To be filled after execution]
@@ -113,7 +146,7 @@ cd wingman && pytest tests/test_semantic_analyzer.py -v
 
 ---
 
-## 10. PERFORMANCE_REQUIREMENTS
+## 13. PERFORMANCE_REQUIREMENTS
 
 **Baseline:**
 - Manual execution time: 20-30 minutes

@@ -1,0 +1,42 @@
+{
+  "worker_id": "WORKER_000",
+  "worker_name": "Rewrite Worker 001 Instruction",
+  "status": "failed",
+  "deliverables_created": [],
+  "test_results": {
+    "all_passed": false,
+    "tests": [
+      {
+        "command": "test -f ai-workers/workers/WORKER_001_Semantic_Class_Skeleton.md",
+        "passed": true,
+        "output": ""
+      },
+      {
+        "command": "test $(grep -c \"^## [0-9]\\\\+\\\\.\" ai-workers/workers/WORKER_001_Semantic_Class_Skeleton.md) -eq 10",
+        "passed": false,
+        "output": ""
+      },
+      {
+        "command": "grep -q \"validation_build/WORKER_001\" ai-workers/workers/WORKER_001_Semantic_Class_Skeleton.md",
+        "passed": false,
+        "output": ""
+      },
+      {
+        "command": "grep -q \"No prior workers\" ai-workers/workers/WORKER_001_Semantic_Class_Skeleton.md",
+        "passed": true,
+        "output": ""
+      },
+      {
+        "command": "grep -q 'Namespace: \"wingman\"' ai-workers/workers/WORKER_001_Semantic_Class_Skeleton.md",
+        "passed": true,
+        "output": ""
+      }
+    ]
+  },
+  "duration_seconds": 32.327473,
+  "timestamp": "2026-02-05T19:03:02.787389",
+  "llm_provider": "openai",
+  "errors": [
+    "Validation failed: {'all_passed': False, 'tests': [{'command': 'test -f ai-workers/workers/WORKER_001_Semantic_Class_Skeleton.md', 'passed': True, 'output': ''}, {'command': 'test $(grep -c \"^## [0-9]\\\\\\\\+\\\\\\\\.\" ai-workers/workers/WORKER_001_Semantic_Class_Skeleton.md) -eq 10', 'passed': False, 'output': ''}, {'command': 'grep -q \"validation_build/WORKER_001\" ai-workers/workers/WORKER_001_Semantic_Class_Skeleton.md', 'passed': False, 'output': ''}, {'command': 'grep -q \"No prior workers\" ai-workers/workers/WORKER_001_Semantic_Class_Skeleton.md', 'passed': True, 'output': ''}, {'command': 'grep -q \\'Namespace: \"wingman\"\\' ai-workers/workers/WORKER_001_Semantic_Class_Skeleton.md', 'passed': True, 'output': ''}]}"
+  ]
+}

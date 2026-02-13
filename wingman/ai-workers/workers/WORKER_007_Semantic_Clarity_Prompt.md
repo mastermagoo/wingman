@@ -10,7 +10,7 @@
 
 ## 1. DELIVERABLES
 
-- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
+- [ ] Create/update file: `validation/semantic_analyzer.py`
 - [ ] Create clarity scoring prompt template
 - [ ] Add prompt that returns JSON {score: int, reasoning: str}
 - [ ] Add examples for low/medium/high clarity
@@ -53,7 +53,7 @@
 
 - **If prompt too long:** Trim examples to fit <2000 chars
 - **If LLM returns wrong format:** Error handling from WORKER_006 handles this
-- **Rollback:** `git checkout wingman/validation/semantic_analyzer.py`
+- **Rollback:** `git checkout validation/semantic_analyzer.py`
 - **Escalation:** None needed (prompt is just text)
 - **Risk Level:** MINIMAL (text generation only)
 
@@ -63,16 +63,16 @@
 
 ```bash
 # Test 1: Method exists
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, '_get_clarity_prompt'); print('PASS: Method exists')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, '_get_clarity_prompt'); print('PASS: Method exists')"
 
 # Test 2: Returns string
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt('test'); assert isinstance(result, str); print('PASS: Returns string')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt('test'); assert isinstance(result, str); print('PASS: Returns string')"
 
 # Test 3: Contains instruction
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt('test instruction'); assert 'test instruction' in result; print('PASS: Contains instruction')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt('test instruction'); assert 'test instruction' in result; print('PASS: Contains instruction')"
 
 # Test 4: Prompt length reasonable
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt('test'); assert len(result) < 2000; print('PASS: Prompt length OK')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt('test'); assert len(result) < 2000; print('PASS: Prompt length OK')"
 ```
 
 ---
@@ -101,7 +101,40 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 8. TASK_CLASSIFICATION
+## 8. RESOURCE_REQUIREMENTS
+
+- **Time:** 20 minutes
+- **Compute:** Local Python 3.9+ interpreter
+- **Memory:** <5 MB
+- **Storage:** None
+- **Network:** None
+- **External Services:** None
+- **Environment:** Python 3.9+ with standard library
+
+---
+
+## 9. RISK_ASSESSMENT
+
+- **Risk Level:** MINIMAL
+- **Impact if Failed:** Clarity scoring unavailable
+- **Probability of Failure:** <5% (Create clarity prompt)
+- **Blast Radius:** Create clarity prompt only
+- **Data Loss Risk:** None (code changes only)
+- **Rollback Complexity:** Simple (git checkout)
+- **Service Disruption:** None (no running services affected)
+
+---
+
+## 10. QUALITY_METRICS
+
+- **Test Pass Rate:** All tests must pass (100%)
+- **Code Quality:** PEP 8 compliant, type hints present
+- **Documentation:** Docstrings present for all public methods
+- **Functionality:** Semantic clarity assessment works as specified
+
+---
+
+## 11. TASK_CLASSIFICATION
 
 - **Type:** CREATIVE
 - **Tool:** Prompt engineering
@@ -111,7 +144,7 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 9. RETROSPECTIVE
+## 12. RETROSPECTIVE
 
 - **Time estimate:** 20 minutes
 - **Actual time:** [To be filled after execution]
@@ -124,7 +157,7 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 10. PERFORMANCE_REQUIREMENTS
+## 13. PERFORMANCE_REQUIREMENTS
 
 **Baseline:**
 - Manual execution time: 20 minutes (design prompt, add examples, test format)

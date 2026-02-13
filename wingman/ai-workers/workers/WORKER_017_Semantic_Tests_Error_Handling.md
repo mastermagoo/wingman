@@ -10,7 +10,7 @@
 
 ## 1. DELIVERABLES
 
-- [ ] Create/update file: `wingman/tests/test_semantic_analyzer.py`
+- [ ] Create/update file: `tests/validation/test_semantic_analyzer.py`
 - [ ] Tests 18-21: Error handling (timeout/invalid JSON/retry/fallback)
 - [ ] Test results file: `ai-workers/results/worker-017-results.json`
 
@@ -61,7 +61,7 @@
 
 ```bash
 # Validation command for WORKER_017
-cd wingman && pytest tests/test_semantic_analyzer.py -v
+pytest tests/validation/test_semantic_analyzer.py -v
 
 
 
@@ -91,7 +91,40 @@ cd wingman && pytest tests/test_semantic_analyzer.py -v
 
 ---
 
-## 8. TASK_CLASSIFICATION
+## 8. RESOURCE_REQUIREMENTS
+
+- **Time:** 20 minutes
+- **Compute:** Local Python 3.9+ interpreter
+- **Memory:** <50 MB
+- **Storage:** <10 KB
+- **Network:** None (mocked)
+- **External Services:** pytest, unittest.mock
+- **Environment:** Python 3.9+ with standard library
+
+---
+
+## 9. RISK_ASSESSMENT
+
+- **Risk Level:** LOW
+- **Impact if Failed:** Error paths untested
+- **Probability of Failure:** <10% (Write error handling tests)
+- **Blast Radius:** Write error handling tests only
+- **Data Loss Risk:** None (code changes only)
+- **Rollback Complexity:** Simple (git checkout)
+- **Service Disruption:** None (no running services affected)
+
+---
+
+## 10. QUALITY_METRICS
+
+- **Test Pass Rate:** All tests must pass (100%)
+- **Code Quality:** PEP 8 compliant, type hints present
+- **Documentation:** Docstrings present for all public methods
+- **Functionality:** Semantic analyzer error resilience works as specified
+
+---
+
+## 11. TASK_CLASSIFICATION
 
 - **Type:** MECHANICAL
 - **Tool:** pytest
@@ -100,7 +133,7 @@ cd wingman && pytest tests/test_semantic_analyzer.py -v
 
 ---
 
-## 9. RETROSPECTIVE
+## 12. RETROSPECTIVE
 
 - **Time estimate:** 20 minutes
 - **Actual time:** [To be filled after execution]
@@ -113,7 +146,7 @@ cd wingman && pytest tests/test_semantic_analyzer.py -v
 
 ---
 
-## 10. PERFORMANCE_REQUIREMENTS
+## 13. PERFORMANCE_REQUIREMENTS
 
 **Baseline:**
 - Manual execution time: 20-30 minutes

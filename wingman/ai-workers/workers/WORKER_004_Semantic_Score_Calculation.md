@@ -10,7 +10,7 @@
 
 ## 1. DELIVERABLES
 
-- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
+- [ ] Create/update file: `validation/semantic_analyzer.py`
 - [ ] Implement `_calculate_final_score(responses: List[Dict]) -> int` method
 - [ ] Add score normalization to 0-100 range
 - [ ] Add weighted averaging logic (clarity 40%, completeness 40%, coherence 20%)
@@ -63,7 +63,7 @@ def _calculate_final_score(self, responses: List[Dict[str, Any]]) -> int:
 - **If invalid input:** Return 0 and log warning
 - **If score out of range:** Clip to 0-100 bounds
 - **If empty responses:** Return 0 (safest default)
-- **Rollback:** `git checkout wingman/validation/semantic_analyzer.py` (restore WORKER_003 version)
+- **Rollback:** `git checkout validation/semantic_analyzer.py` (restore WORKER_003 version)
 - **Escalation:** None needed (pure calculation, low risk)
 - **Risk Level:** MINIMAL (deterministic math, no external dependencies)
 
@@ -73,22 +73,22 @@ def _calculate_final_score(self, responses: List[Dict[str, Any]]) -> int:
 
 ```bash
 # Test 1: Method exists
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, '_calculate_final_score'); print('PASS: Method exists')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, '_calculate_final_score'); print('PASS: Method exists')"
 
 # Test 2: Empty list returns 0
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._calculate_final_score([]); assert result == 0; print('PASS: Empty list returns 0')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._calculate_final_score([]); assert result == 0; print('PASS: Empty list returns 0')"
 
 # Test 3: Single score normalized
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._calculate_final_score([{'score': 85}]); assert 0 <= result <= 100; print(f'PASS: Single score normalized ({result})')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._calculate_final_score([{'score': 85}]); assert 0 <= result <= 100; print(f'PASS: Single score normalized ({result})')"
 
 # Test 4: Multiple scores averaged
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._calculate_final_score([{'score': 80}, {'score': 90}]); assert 80 <= result <= 90; print(f'PASS: Multiple scores averaged ({result})')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._calculate_final_score([{'score': 80}, {'score': 90}]); assert 80 <= result <= 90; print(f'PASS: Multiple scores averaged ({result})')"
 
 # Test 5: Out of range clipped
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._calculate_final_score([{'score': 150}]); assert result == 100; print('PASS: High score clipped to 100')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._calculate_final_score([{'score': 150}]); assert result == 100; print('PASS: High score clipped to 100')"
 
 # Test 6: Negative score clipped
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._calculate_final_score([{'score': -50}]); assert result == 0; print('PASS: Negative score clipped to 0')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._calculate_final_score([{'score': -50}]); assert result == 0; print('PASS: Negative score clipped to 0')"
 ```
 
 ---
@@ -119,7 +119,40 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 8. TASK_CLASSIFICATION
+## 8. RESOURCE_REQUIREMENTS
+
+- **Time:** 20 minutes
+- **Compute:** Local Python 3.9+ interpreter
+- **Memory:** <5 MB
+- **Storage:** None
+- **Network:** None
+- **External Services:** None
+- **Environment:** Python 3.9+ with standard library
+
+---
+
+## 9. RISK_ASSESSMENT
+
+- **Risk Level:** MINIMAL
+- **Impact if Failed:** Semantic scores may be incorrect
+- **Probability of Failure:** <5% (Implement score calculation)
+- **Blast Radius:** Implement score calculation only
+- **Data Loss Risk:** None (code changes only)
+- **Rollback Complexity:** Simple (git checkout)
+- **Service Disruption:** None (no running services affected)
+
+---
+
+## 10. QUALITY_METRICS
+
+- **Test Pass Rate:** All tests must pass (100%)
+- **Code Quality:** PEP 8 compliant, type hints present
+- **Documentation:** Docstrings present for all public methods
+- **Functionality:** Semantic analyzer scoring logic works as specified
+
+---
+
+## 11. TASK_CLASSIFICATION
 
 - **Type:** MECHANICAL
 - **Tool:** Python math operations
@@ -129,7 +162,7 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 9. RETROSPECTIVE
+## 12. RETROSPECTIVE
 
 - **Time estimate:** 20 minutes
 - **Actual time:** [To be filled after execution]
@@ -142,7 +175,7 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 10. PERFORMANCE_REQUIREMENTS
+## 13. PERFORMANCE_REQUIREMENTS
 
 **Baseline:**
 - Manual execution time: 15 minutes (write calculation, test edge cases)

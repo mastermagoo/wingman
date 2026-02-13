@@ -23,6 +23,18 @@
 
 ---
 
+## DELIVERY PRINCIPLE (NON-NEGOTIABLE)
+
+We **deliver one functional capability at a time** and take it through a full **build → test → deploy** cycle before starting the next capability.
+
+**Phase 1A starting point**: Semantic Analyzer (WORKER_001–018).
+
+- **Functional phase examples**: Semantic Analyzer only, then Code Scanner only, then Dependency Analyzer only, then Content Quality Validator only.
+- **Quality gate**: Each phase must ship to **TEST**, pass its tests, and produce runtime evidence before the next phase begins.
+- **No “big bang” execution**: We do not run “all 225 workers” as a single delivery unit unless explicitly instructed after prior phases have proven quality.
+
+---
+
 ## 225 WORKERS BREAKDOWN
 
 ### META_WORKER_WINGMAN_01: Phase 1 (54 workers × 20 min)
@@ -147,19 +159,33 @@ Real-time dashboard showing:
 
 **Result**: 225 complete worker instruction files
 
-### Step 2: Submit to Wingman for Approval (1 hour)
-- Submit all 225 workers to Wingman API
-- Wingman validates each (≥80% score required)
-- Rejected workers revised and resubmitted
+### Step 2: Phase Instruction Quality Gate (NO human approvals noise)
 
-**Result**: 225 approved workers
+For the **current phase only** (e.g., Semantic Analyzer), we validate the relevant worker instructions for completeness and measurability **without generating 225 human approvals**.
 
-### Step 3: Execute Approved Workers (3 hours)
-- Phase 1: WORKER_001-054 (40 min)
-- Phase 2: WORKER_055-087 (20 min, depends on Phase 1)
-- Phase 3-6: WORKER_088-225 (2h, depends on Phase 2)
+- Use Wingman **instruction validation** (`POST /check`) as the quality gate for worker instructions.
+- Only use Wingman **approvals** (`POST /approvals/request`) when a step is genuinely destructive (deploy/restart/rebuild), per repo safety rules.
 
-**Result**: All validators implemented, 203 tests passing, deployed to PRD
+**Result**: Phase instructions are quality-gated without spamming approvals.
+
+### Step 3: Execute Phase Workers (Build + Unit Tests)
+
+- Execute only the workers required for the phase deliverable (e.g., Semantic Analyzer = WORKER_001–018).
+- Run the phase’s unit tests and capture evidence (pytest output, coverage where applicable).
+
+**Result**: Phase capability built and test-verified in the codebase.
+
+### Step 4: Deploy Phase to TEST (approval-gated destructive ops)
+
+- Deploy the phase to **TEST** behind a feature flag (if applicable).
+- Any Docker rebuild/restart/down/up is treated as a destructive operation and must go through Wingman approval gates.
+- Run TEST smoke checks and capture evidence.
+
+**Result**: Phase capability deployed and validated in TEST.
+
+### Step 5: Quality Review Gate
+
+Stop and present evidence. Only proceed to the next functional phase after quality is accepted.
 
 ---
 

@@ -10,13 +10,13 @@
 
 ## 1. DELIVERABLES
 
-- [ ] Create file: `wingman/validation/semantic_analyzer.py`
+- [ ] Create file: `validation/semantic_analyzer.py`
 - [ ] Implement class `SemanticAnalyzer` with `__init__` method
 - [ ] Add ollama endpoint parameter (default: http://ollama:11434)
 - [ ] Add basic imports and module docstring
 - [ ] Test results file: `ai-workers/results/worker-001-results.json`
 
-**Exact File Path:** `/Volumes/Data/ai_projects/wingman-system/wingman/wingman/validation/semantic_analyzer.py`
+**Exact File Path:** (repo root)/validation/semantic_analyzer.py
 
 ---
 
@@ -44,7 +44,7 @@
 
 ## 4. DEPENDENCIES
 
-- **Directory exists:** `wingman/validation/` directory must exist
+- **Directory exists:** `validation/` directory must exist
 - **Python environment:** Python 3.9+ with standard library
 - **No external services:** This task requires NO running services
 - **No prior workers:** This is WORKER_001 - first worker in sequence
@@ -53,10 +53,10 @@
 
 ## 5. MITIGATION
 
-- **If directory missing:** Create `wingman/validation/` directory
+- **If directory missing:** Create `validation/` directory
 - **If file exists:** Validate structure matches requirements, update if needed
 - **If import fails:** Check Python path, verify __init__.py exists in validation/
-- **Rollback:** `rm wingman/validation/semantic_analyzer.py` (if newly created)
+- **Rollback:** `rm validation/semantic_analyzer.py` (if newly created)
 - **Escalation:** If Python environment missing or broken, escalate to human (critical path)
 - **Risk Level:** MINIMAL (creating new file, no service dependencies)
 
@@ -66,16 +66,16 @@
 
 ```bash
 # Test 1: File exists
-test -f wingman/validation/semantic_analyzer.py && echo "PASS: File exists" || echo "FAIL: File missing"
+test -f validation/semantic_analyzer.py && echo "PASS: File exists" || echo "FAIL: File missing"
 
 # Test 2: Python can import module
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; print('PASS: Import successful')" || echo "FAIL: Import failed"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; print('PASS: Import successful')" || echo "FAIL: Import failed"
 
 # Test 3: Class instantiates
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert s is not None; print('PASS: Instantiation successful')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert s is not None; print('PASS: Instantiation successful')"
 
 # Test 4: Accepts ollama_endpoint parameter
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(ollama_endpoint='http://test:11434'); print('PASS: Parameter accepted')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(ollama_endpoint='http://test:11434'); print('PASS: Parameter accepted')"
 ```
 
 ---
@@ -88,7 +88,7 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
   "worker_name": "Semantic_Class_Skeleton",
   "status": "pass|fail",
   "deliverables_created": [
-    "wingman/validation/semantic_analyzer.py"
+    "validation/semantic_analyzer.py"
   ],
   "test_results": {
     "file_exists": "pass|fail",
@@ -104,7 +104,42 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 8. TASK_CLASSIFICATION
+## 8. RESOURCE_REQUIREMENTS
+
+- **Time:** 20 minutes
+- **Compute:** Local Python 3.9+ interpreter
+- **Memory:** <10 MB
+- **Storage:** <5 KB (single Python file)
+- **Network:** None required
+- **External Services:** None required
+- **Environment:** Python 3.9+ with standard library only
+
+---
+
+## 9. RISK_ASSESSMENT
+
+- **Risk Level:** LOW
+- **Impact if Failed:** Semantic analyzer feature cannot be implemented (missing foundation class)
+- **Probability of Failure:** <5% (simple file creation)
+- **Blast Radius:** Single file creation only
+- **Data Loss Risk:** None (new file, no data modification)
+- **Rollback Complexity:** Trivial (delete file)
+- **Service Disruption:** None (no services affected)
+
+---
+
+## 10. QUALITY_METRICS
+
+- **Test Pass Rate:** 4/4 tests must pass (100%)
+- **Import Success:** Module must import without errors
+- **Class Instantiation:** Must create instance without exceptions
+- **Parameter Acceptance:** Constructor must accept ollama_endpoint parameter
+- **Code Quality:** PEP 8 compliant, type hints present
+- **Documentation:** Class docstring present
+
+---
+
+## 11. TASK_CLASSIFICATION
 
 - **Type:** MECHANICAL
 - **Tool:** Python file writing
@@ -114,7 +149,7 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 9. RETROSPECTIVE
+## 12. RETROSPECTIVE
 
 - **Time estimate:** 20 minutes
 - **Actual time:** [To be filled after execution]
@@ -127,7 +162,7 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 10. PERFORMANCE_REQUIREMENTS
+## 13. PERFORMANCE_REQUIREMENTS
 
 **Baseline:**
 - Manual execution time: 10 minutes (create file, write class skeleton, test import)

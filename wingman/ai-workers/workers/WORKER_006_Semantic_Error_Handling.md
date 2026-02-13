@@ -10,7 +10,7 @@
 
 ## 1. DELIVERABLES
 
-- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
+- [ ] Create/update file: `validation/semantic_analyzer.py`
 - [ ] Add timeout handling for LLM calls (30 second timeout)
 - [ ] Add invalid JSON response handling with fallback
 - [ ] Add connection error handling (network failures)
@@ -54,7 +54,7 @@
 
 - **If timeout too short:** Increase to 30s (conservative)
 - **If fallback fails:** Return minimal safe dict with LOW confidence
-- **Rollback:** `git checkout wingman/validation/semantic_analyzer.py`
+- **Rollback:** `git checkout validation/semantic_analyzer.py`
 - **Escalation:** If all error paths fail, escalate (critical bug)
 - **Risk Level:** LOW (improves reliability, no breaking changes)
 
@@ -64,7 +64,7 @@
 
 ```bash
 # Test 1: Timeout handled (mock)
-cd wingman && python3 -c "
+python3 -c "
 from validation.semantic_analyzer import SemanticAnalyzer
 import requests
 from unittest.mock import patch
@@ -78,7 +78,7 @@ with patch('requests.post', side_effect=requests.Timeout('timeout')):
 "
 
 # Test 2: Invalid JSON handled
-cd wingman && python3 -c "
+python3 -c "
 from validation.semantic_analyzer import SemanticAnalyzer
 from unittest.mock import Mock, patch
 
@@ -92,7 +92,7 @@ with patch('requests.post', return_value=mock_response):
 "
 
 # Test 3: Connection error handled
-cd wingman && python3 -c "
+python3 -c "
 from validation.semantic_analyzer import SemanticAnalyzer
 import requests
 from unittest.mock import patch
@@ -132,7 +132,40 @@ with patch('requests.post', side_effect=requests.ConnectionError('network error'
 
 ---
 
-## 8. TASK_CLASSIFICATION
+## 8. RESOURCE_REQUIREMENTS
+
+- **Time:** 20 minutes
+- **Compute:** Local Python 3.9+ interpreter
+- **Memory:** <10 MB
+- **Storage:** None
+- **Network:** None
+- **External Services:** None
+- **Environment:** Python 3.9+ with standard library
+
+---
+
+## 9. RISK_ASSESSMENT
+
+- **Risk Level:** LOW
+- **Impact if Failed:** Semantic analyzer may crash on errors
+- **Probability of Failure:** <10% (Add error handling)
+- **Blast Radius:** Add error handling only
+- **Data Loss Risk:** None (code changes only)
+- **Rollback Complexity:** Simple (git checkout)
+- **Service Disruption:** None (no running services affected)
+
+---
+
+## 10. QUALITY_METRICS
+
+- **Test Pass Rate:** All tests must pass (100%)
+- **Code Quality:** PEP 8 compliant, type hints present
+- **Documentation:** Docstrings present for all public methods
+- **Functionality:** Semantic analyzer reliability works as specified
+
+---
+
+## 11. TASK_CLASSIFICATION
 
 - **Type:** MECHANICAL
 - **Tool:** Python exception handling
@@ -142,7 +175,7 @@ with patch('requests.post', side_effect=requests.ConnectionError('network error'
 
 ---
 
-## 9. RETROSPECTIVE
+## 12. RETROSPECTIVE
 
 - **Time estimate:** 20 minutes
 - **Actual time:** [To be filled after execution]
@@ -155,7 +188,7 @@ with patch('requests.post', side_effect=requests.ConnectionError('network error'
 
 ---
 
-## 10. PERFORMANCE_REQUIREMENTS
+## 13. PERFORMANCE_REQUIREMENTS
 
 **Baseline:**
 - Manual execution time: 20 minutes (add error handling, test edge cases)

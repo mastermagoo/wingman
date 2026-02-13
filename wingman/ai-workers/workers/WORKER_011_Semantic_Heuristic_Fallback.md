@@ -10,7 +10,7 @@
 
 ## 1. DELIVERABLES
 
-- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
+- [ ] Create/update file: `validation/semantic_analyzer.py`
 - [ ] Rule-based scoring (word count, sections) when LLM fails
 - [ ] Test results file: `ai-workers/results/worker-011-results.json`
 
@@ -64,7 +64,7 @@
 
 
 
-cd wingman && python3 -c 'from validation import *; print("PASS: Module imports")'
+python3 -c 'from validation import *; print("PASS: Module imports")'
 ```
 
 ---
@@ -91,7 +91,40 @@ cd wingman && python3 -c 'from validation import *; print("PASS: Module imports"
 
 ---
 
-## 8. TASK_CLASSIFICATION
+## 8. RESOURCE_REQUIREMENTS
+
+- **Time:** 20 minutes
+- **Compute:** Local Python 3.9+ interpreter
+- **Memory:** <5 MB
+- **Storage:** None
+- **Network:** None
+- **External Services:** None
+- **Environment:** Python 3.9+ with standard library
+
+---
+
+## 9. RISK_ASSESSMENT
+
+- **Risk Level:** LOW
+- **Impact if Failed:** Semantic analyzer fails when LLM unavailable
+- **Probability of Failure:** <10% (Implement heuristic fallback)
+- **Blast Radius:** Implement heuristic fallback only
+- **Data Loss Risk:** None (code changes only)
+- **Rollback Complexity:** Simple (git checkout)
+- **Service Disruption:** None (no running services affected)
+
+---
+
+## 10. QUALITY_METRICS
+
+- **Test Pass Rate:** All tests must pass (100%)
+- **Code Quality:** PEP 8 compliant, type hints present
+- **Documentation:** Docstrings present for all public methods
+- **Functionality:** Semantic analyzer reliability (no LLM) works as specified
+
+---
+
+## 11. TASK_CLASSIFICATION
 
 - **Type:** MECHANICAL
 - **Tool:** Python implementation
@@ -100,7 +133,7 @@ cd wingman && python3 -c 'from validation import *; print("PASS: Module imports"
 
 ---
 
-## 9. RETROSPECTIVE
+## 12. RETROSPECTIVE
 
 - **Time estimate:** 20 minutes
 - **Actual time:** [To be filled after execution]
@@ -113,7 +146,7 @@ cd wingman && python3 -c 'from validation import *; print("PASS: Module imports"
 
 ---
 
-## 10. PERFORMANCE_REQUIREMENTS
+## 13. PERFORMANCE_REQUIREMENTS
 
 **Baseline:**
 - Manual execution time: 20-30 minutes

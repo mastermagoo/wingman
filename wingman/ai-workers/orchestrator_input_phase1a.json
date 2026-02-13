@@ -1,0 +1,85 @@
+{
+  "phase": "1A",
+  "phase_name": "Semantic Analyzer",
+  "repo_root_note": "All paths relative to wingman repo root (e.g. /Volumes/Data/ai_projects/wingman-system/wingman)",
+  "api": {
+    "base_url": "http://127.0.0.1:8101",
+    "health": "GET /health",
+    "check": "POST /check",
+    "approvals_request": "POST /approvals/request",
+    "approvals_pending": "GET /approvals/pending"
+  },
+  "check": {
+    "request_content_type": "application/json",
+    "request_body_schema": { "instruction": "<full markdown string of worker instruction>" },
+    "response_fields": ["approved", "score", "missing_sections", "validation", "policy_checks"],
+    "pass_threshold": 80,
+    "pass_condition": "score >= 80 (and approved === true)"
+  },
+  "approvals_request": {
+    "request_content_type": "application/json",
+    "request_body_schema": {
+      "worker_id": "string",
+      "task_name": "string",
+      "instruction": "string (must include the exact deploy command for later token mint)",
+      "deployment_env": "test|prd (optional)"
+    },
+    "optional_header": "X-Wingman-Approval-Request-Key (if API requires auth)",
+    "response_when_pending": { "needs_approval": true, "status": "PENDING", "request": { "id": "..." } },
+    "response_when_auto": { "needs_approval": false, "status": "AUTO_APPROVED" }
+  },
+  "worker_files": [
+    { "id": "WORKER_001", "path": "ai-workers/workers/WORKER_001_Semantic_Class_Skeleton.md" },
+    { "id": "WORKER_002", "path": "ai-workers/workers/WORKER_002_Semantic_Ollama_Client.md" },
+    { "id": "WORKER_003", "path": "ai-workers/workers/WORKER_003_Semantic_Analyze_Method_Structure.md" },
+    { "id": "WORKER_004", "path": "ai-workers/workers/WORKER_004_Semantic_Score_Calculation.md" },
+    { "id": "WORKER_005", "path": "ai-workers/workers/WORKER_005_Semantic_Reasoning_Dict.md" },
+    { "id": "WORKER_006", "path": "ai-workers/workers/WORKER_006_Semantic_Error_Handling.md" },
+    { "id": "WORKER_007", "path": "ai-workers/workers/WORKER_007_Semantic_Clarity_Prompt.md" },
+    { "id": "WORKER_008", "path": "ai-workers/workers/WORKER_008_Semantic_Completeness_Prompt.md" },
+    { "id": "WORKER_009", "path": "ai-workers/workers/WORKER_009_Semantic_Coherence_Prompt.md" },
+    { "id": "WORKER_010", "path": "ai-workers/workers/WORKER_010_Semantic_Prompt_Parser.md" },
+    { "id": "WORKER_011", "path": "ai-workers/workers/WORKER_011_Semantic_Heuristic_Fallback.md" },
+    { "id": "WORKER_012", "path": "ai-workers/workers/WORKER_012_Semantic_Prompt_Consistency.md" },
+    { "id": "WORKER_013", "path": "ai-workers/workers/WORKER_013_Semantic_Tests_Clarity.md" },
+    { "id": "WORKER_014", "path": "ai-workers/workers/WORKER_014_Semantic_Tests_Completeness.md" },
+    { "id": "WORKER_015", "path": "ai-workers/workers/WORKER_015_Semantic_Tests_Coherence.md" },
+    { "id": "WORKER_016", "path": "ai-workers/workers/WORKER_016_Semantic_Tests_Edge_Cases.md" },
+    { "id": "WORKER_017", "path": "ai-workers/workers/WORKER_017_Semantic_Tests_Error_Handling.md" },
+    { "id": "WORKER_018", "path": "ai-workers/workers/WORKER_018_Semantic_Tests_Integration.md" }
+  ],
+  "deliverables": {
+    "code": "validation/semantic_analyzer.py",
+    "tests": "tests/validation/test_semantic_analyzer.py",
+    "fixtures": "tests/validation/fixtures.py"
+  },
+  "baseline_facts": {
+    "validation/semantic_analyzer.py": "does not exist yet (to be created by workers)",
+    "tests/validation/test_semantic_analyzer.py": "exists; tests currently skipped until module exists",
+    "tests/validation/fixtures.py": "exists; contains SEMANTIC_ANALYZER_TEST_CASES",
+    "ollama": "shared host; containers use OLLAMA_HOST/OLLAMA_PORT; host URL http://127.0.0.1:11434/api/tags"
+  },
+  "test_commands": {
+    "unit_test": "pytest -q tests/validation/test_semantic_analyzer.py",
+    "import_check": "python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; print('ok')\""
+  },
+  "deploy": {
+    "environment": "test",
+    "compose_file": "docker-compose.yml",
+    "compose_project": "wingman-test",
+    "env_file": ".env.test",
+    "service_to_build": "wingman-api",
+    "deploy_command": "docker compose -f docker-compose.yml -p wingman-test --env-file .env.test up -d --build wingman-api"
+  },
+  "smoke_test": {
+    "run_inside": "wingman-api",
+    "command": "python -c \"from validation.semantic_analyzer import SemanticAnalyzer; s=SemanticAnalyzer(); r=s.analyze('DELIVERABLES: Read logs\\nSUCCESS_CRITERIA: Print last 100 lines\\n...','smoke','test'); assert isinstance(r,dict); assert 'risk_level' in r; print('ok')\"",
+    "expected_stdout": "ok",
+    "expected_dict_keys": ["risk_level", "operation_types", "blast_radius", "reasoning", "confidence"]
+  },
+  "success_criteria": {
+    "step1": "All 18 workers score >= 80 on POST /check",
+    "step2": "pytest -q tests/validation/test_semantic_analyzer.py exits 0 (no skips)",
+    "step3": "After deploy: smoke test prints ok and result dict has required keys"
+  }
+}

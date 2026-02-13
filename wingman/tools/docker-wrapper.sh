@@ -49,7 +49,7 @@ for destructive_cmd in "${DESTRUCTIVE_COMMANDS[@]}"; do
         echo "" >&2
         echo "   Action Required:" >&2
         echo "   1. Submit approval request to Wingman API" >&2
-        echo "      POST http://127.0.0.1:5002/approvals/request" >&2
+        echo "      POST http://127.0.0.1:8101/approvals/request (TEST) or :5001 (PRD)" >&2
         echo "   2. Wait for approval via Telegram" >&2
         echo "   3. Execute via Wingman Execution Gateway with capability token" >&2
         echo "" >&2
@@ -58,6 +58,15 @@ for destructive_cmd in "${DESTRUCTIVE_COMMANDS[@]}"; do
     fi
 done
 
-# Safe command - allow through to actual docker binary
-# Use full path to avoid recursion
-exec /Users/kermit/.orbstack/bin/docker "$@"
+# Safe command - allow through to actual docker binary (avoid recursion)
+if [[ -n "${DOCKER_BIN:-}" ]]; then
+    exec "$DOCKER_BIN" "$@"
+fi
+# Fallback: common locations (no PATH search - would find this wrapper)
+for candidate in /usr/local/bin/docker /opt/homebrew/bin/docker "${HOME}/.orbstack/bin/docker" /usr/bin/docker; do
+    if [[ -x "$candidate" ]]; then
+        exec "$candidate" "$@"
+    fi
+done
+echo "❌ DOCKER_BIN not set and no docker binary found in standard locations. Set DOCKER_BIN to the real docker path." >&2
+exit 1

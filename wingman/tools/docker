@@ -1,0 +1,5 @@
+#!/bin/bash
+# Shim so that when wingman/tools is first in PATH, `docker` runs the wrapper.
+# Usage: Prepend wingman/tools to PATH so that all docker invocations are gated.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+exec "$SCRIPT_DIR/docker-wrapper.sh" "$@"

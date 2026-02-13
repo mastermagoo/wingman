@@ -10,7 +10,7 @@
 
 ## 1. DELIVERABLES
 
-- [ ] Create/update file: `wingman/validation/semantic_analyzer.py`
+- [ ] Create/update file: `validation/semantic_analyzer.py`
 - [ ] Implement `_build_reasoning_dict(responses: List[Dict]) -> Dict[str, str]` method
 - [ ] Add JSON schema validation for reasoning structure
 - [ ] Return dict with keys: clarity, completeness, coherence
@@ -67,7 +67,7 @@ def _build_reasoning_dict(self, responses: List[Dict[str, Any]]) -> Dict[str, st
 - **If missing keys:** Use default value "Reasoning not provided"
 - **If invalid type:** Convert to string with str()
 - **If too long:** Truncate to 500 chars with "..." suffix
-- **Rollback:** `git checkout wingman/validation/semantic_analyzer.py` (restore WORKER_004 version)
+- **Rollback:** `git checkout validation/semantic_analyzer.py` (restore WORKER_004 version)
 - **Escalation:** None needed (simple data transformation)
 - **Risk Level:** MINIMAL (pure data structure, no external dependencies)
 
@@ -77,19 +77,19 @@ def _build_reasoning_dict(self, responses: List[Dict[str, Any]]) -> Dict[str, st
 
 ```bash
 # Test 1: Method exists
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, '_build_reasoning_dict'); print('PASS: Method exists')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, '_build_reasoning_dict'); print('PASS: Method exists')"
 
 # Test 2: Empty list returns defaults
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._build_reasoning_dict([]); assert len(result) == 3; assert all(k in result for k in ['clarity', 'completeness', 'coherence']); print('PASS: Empty list returns defaults')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._build_reasoning_dict([]); assert len(result) == 3; assert all(k in result for k in ['clarity', 'completeness', 'coherence']); print('PASS: Empty list returns defaults')"
 
 # Test 3: Valid responses extracted
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._build_reasoning_dict([{'reasoning': 'clear', 'type': 'clarity'}]); assert 'clarity' in result; print('PASS: Valid responses extracted')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._build_reasoning_dict([{'reasoning': 'clear', 'type': 'clarity'}]); assert 'clarity' in result; print('PASS: Valid responses extracted')"
 
 # Test 4: All keys present
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._build_reasoning_dict([{'reasoning': 'test'}]); keys = ['clarity', 'completeness', 'coherence']; assert all(k in result for k in keys); print('PASS: All required keys present')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._build_reasoning_dict([{'reasoning': 'test'}]); keys = ['clarity', 'completeness', 'coherence']; assert all(k in result for k in keys); print('PASS: All required keys present')"
 
 # Test 5: Long text truncated
-cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._build_reasoning_dict([{'reasoning': 'x'*1000, 'type': 'clarity'}]); assert len(result['clarity']) <= 503; print('PASS: Long text truncated')"
+python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._build_reasoning_dict([{'reasoning': 'x'*1000, 'type': 'clarity'}]); assert len(result['clarity']) <= 503; print('PASS: Long text truncated')"
 ```
 
 ---
@@ -119,7 +119,40 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 8. TASK_CLASSIFICATION
+## 8. RESOURCE_REQUIREMENTS
+
+- **Time:** 20 minutes
+- **Compute:** Local Python 3.9+ interpreter
+- **Memory:** <5 MB
+- **Storage:** None
+- **Network:** None
+- **External Services:** None
+- **Environment:** Python 3.9+ with standard library
+
+---
+
+## 9. RISK_ASSESSMENT
+
+- **Risk Level:** MINIMAL
+- **Impact if Failed:** Semantic analyzer lacks explanatory output
+- **Probability of Failure:** <5% (Build reasoning dictionary)
+- **Blast Radius:** Build reasoning dictionary only
+- **Data Loss Risk:** None (code changes only)
+- **Rollback Complexity:** Simple (git checkout)
+- **Service Disruption:** None (no running services affected)
+
+---
+
+## 10. QUALITY_METRICS
+
+- **Test Pass Rate:** All tests must pass (100%)
+- **Code Quality:** PEP 8 compliant, type hints present
+- **Documentation:** Docstrings present for all public methods
+- **Functionality:** Semantic analyzer reasoning output works as specified
+
+---
+
+## 11. TASK_CLASSIFICATION
 
 - **Type:** MECHANICAL
 - **Tool:** Python dict manipulation
@@ -129,7 +162,7 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 9. RETROSPECTIVE
+## 12. RETROSPECTIVE
 
 - **Time estimate:** 20 minutes
 - **Actual time:** [To be filled after execution]
@@ -142,7 +175,7 @@ cd wingman && python3 -c "from validation.semantic_analyzer import SemanticAnaly
 
 ---
 
-## 10. PERFORMANCE_REQUIREMENTS
+## 13. PERFORMANCE_REQUIREMENTS
 
 **Baseline:**
 - Manual execution time: 15 minutes (write dict builder, test)

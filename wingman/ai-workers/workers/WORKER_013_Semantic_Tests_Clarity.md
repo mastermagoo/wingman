@@ -10,7 +10,7 @@
 
 ## 1. DELIVERABLES
 
-- [ ] Create/update file: `wingman/tests/test_semantic_analyzer.py`
+- [ ] Create/update file: `tests/validation/test_semantic_analyzer.py`
 - [ ] Tests 1-4: Clarity scoring (high/moderate/low/vague)
 - [ ] Test results file: `ai-workers/results/worker-013-results.json`
 
@@ -61,7 +61,7 @@
 
 ```bash
 # Validation command for WORKER_013
-cd wingman && pytest tests/test_semantic_analyzer.py -v
+pytest tests/validation/test_semantic_analyzer.py -v
 
 
 
@@ -91,7 +91,40 @@ cd wingman && pytest tests/test_semantic_analyzer.py -v
 
 ---
 
-## 8. TASK_CLASSIFICATION
+## 8. RESOURCE_REQUIREMENTS
+
+- **Time:** 20 minutes
+- **Compute:** Local Python 3.9+ interpreter
+- **Memory:** <50 MB
+- **Storage:** <10 KB
+- **Network:** Localhost to Ollama (if integration tests)
+- **External Services:** pytest, Ollama (optional)
+- **Environment:** Python 3.9+ with standard library
+
+---
+
+## 9. RISK_ASSESSMENT
+
+- **Risk Level:** MINIMAL
+- **Impact if Failed:** Clarity scoring untested
+- **Probability of Failure:** <5% (Write clarity tests)
+- **Blast Radius:** Write clarity tests only
+- **Data Loss Risk:** None (code changes only)
+- **Rollback Complexity:** Simple (git checkout)
+- **Service Disruption:** None (no running services affected)
+
+---
+
+## 10. QUALITY_METRICS
+
+- **Test Pass Rate:** All tests must pass (100%)
+- **Code Quality:** PEP 8 compliant, type hints present
+- **Documentation:** Docstrings present for all public methods
+- **Functionality:** Semantic clarity validation works as specified
+
+---
+
+## 11. TASK_CLASSIFICATION
 
 - **Type:** MECHANICAL
 - **Tool:** pytest
@@ -100,7 +133,7 @@ cd wingman && pytest tests/test_semantic_analyzer.py -v
 
 ---
 
-## 9. RETROSPECTIVE
+## 12. RETROSPECTIVE
 
 - **Time estimate:** 20 minutes
 - **Actual time:** [To be filled after execution]
@@ -113,7 +146,7 @@ cd wingman && pytest tests/test_semantic_analyzer.py -v
 
 ---
 
-## 10. PERFORMANCE_REQUIREMENTS
+## 13. PERFORMANCE_REQUIREMENTS
 
 **Baseline:**
 - Manual execution time: 20-30 minutes

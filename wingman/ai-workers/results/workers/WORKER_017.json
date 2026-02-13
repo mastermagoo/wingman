@@ -1,0 +1,24 @@
+{
+  "worker_id": "WORKER_017",
+  "worker_name": "Semantic Tests Error Handling",
+  "status": "failed",
+  "deliverables_created": [
+    "tests/validation/test_semantic_analyzer.py"
+  ],
+  "test_results": {
+    "all_passed": false,
+    "tests": [
+      {
+        "command": "pytest tests/validation/test_semantic_analyzer.py -v",
+        "passed": false,
+        "output": ""
+      }
+    ]
+  },
+  "duration_seconds": 65.085208,
+  "timestamp": "2026-02-04T16:58:54.654842",
+  "llm_provider": "openai",
+  "errors": [
+    "Validation failed: {'all_passed': False, 'tests': [{'command': 'pytest tests/validation/test_semantic_analyzer.py -v', 'passed': False, 'output': ''}]}"
+  ]
+}
