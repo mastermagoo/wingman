@@ -31,7 +31,14 @@ data/
 # Cross-project contamination prevention
 # CRITICAL: Only wingman/ subdirectory should be committed
 # Block other project directories that might exist at root level
-migration_from_intel-system/
-tools/
+# NOTE: Leading slash (/) means root level only, does NOT block wingman/docs/
+/migration_from_intel-system/
+/tools/
 /docs/
 *.code-workspace
+
+# AI Workers results (local only)
+wingman/ai-workers/results/*
+!wingman/ai-workers/results/README.md
+!wingman/ai-workers/results/meta-workers/
+!wingman/ai-workers/results/workers/

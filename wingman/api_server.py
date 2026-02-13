@@ -35,6 +35,12 @@ except ImportError as e:
     print(f"Error importing modules: {e}")
     sys.exit(1)
 
+try:
+    from validation.composite_validator import CompositeValidator
+    composite_validator = CompositeValidator()
+except ImportError:
+    composite_validator = None
+
 app = Flask(__name__)
 CORS(app)  # Allow all origins for now
 
@@ -267,7 +273,8 @@ def verify():
 @app.route('/check', methods=['POST'])
 def check():
     """
-    Phase 2: Validate instruction against 10-point framework
+    Phase 2: Validate instruction against 10-point framework.
+    When validation package is available, also runs CompositeValidator (code, content, dependency, semantic).
     """
     try:
         data = request.get_json()
@@ -277,8 +284,18 @@ def check():
                 "approved": False,
                 "score": 0
             }), 400
-        
-        result = instruction_validator.validate(data['instruction'])
+
+        instruction = data['instruction']
+        result = instruction_validator.validate(instruction)
+
+        if composite_validator is not None:
+            composite_result = composite_validator.validate(instruction)
+            result["composite_score"] = composite_result["overall_score"]
+            result["composite_recommendation"] = composite_result["recommendation"]
+            result["composite_risk_level"] = composite_result["risk_level"]
+            result["composite_reasoning"] = composite_result["reasoning"]
+            result["validator_scores"] = composite_result["validator_scores"]
+
         return jsonify(result), 200
     except Exception as e:
         return jsonify({

@@ -1,0 +1,39 @@
+{
+  "worker_id": "WORKER_007",
+  "worker_name": "Semantic Clarity Prompt",
+  "status": "failed",
+  "deliverables_created": [
+    "validation/semantic_analyzer.py"
+  ],
+  "test_results": {
+    "all_passed": false,
+    "tests": [
+      {
+        "command": "python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, '_get_clarity_prompt'); print('PASS: Method exists')\"",
+        "passed": false,
+        "output": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, '_get_clarity_prompt'); print('PASS: Method exists')\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\n    import requests\nModuleNotFoundError: No module named 'requests'\n"
+      },
+      {
+        "command": "python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt('test'); assert isinstance(result, str); print('PASS: Returns string')\"",
+        "passed": false,
+        "output": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt('test'); assert isinstance(result, str); print('PASS: Returns string')\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\n    import requests\nModuleNotFoundError: No module named 'requests'\n"
+      },
+      {
+        "command": "python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt('test instruction'); assert 'test instruction' in result; print('PASS: Contains instruction')\"",
+        "passed": false,
+        "output": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt('test instruction'); assert 'test instruction' in result; print('PASS: Contains instruction')\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\n    import requests\nModuleNotFoundError: No module named 'requests'\n"
+      },
+      {
+        "command": "python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt('test'); assert len(result) < 2000; print('PASS: Prompt length OK')\"",
+        "passed": false,
+        "output": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt('test'); assert len(result) < 2000; print('PASS: Prompt length OK')\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\n    import requests\nModuleNotFoundError: No module named 'requests'\n"
+      }
+    ]
+  },
+  "duration_seconds": 29.174634,
+  "timestamp": "2026-02-04T16:49:21.226244",
+  "llm_provider": "openai",
+  "errors": [
+    "Validation failed: {'all_passed': False, 'tests': [{'command': 'python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, \\'_get_clarity_prompt\\'); print(\\'PASS: Method exists\\')\"', 'passed': False, 'output': 'Traceback (most recent call last):\\n  File \"<string>\", line 1, in <module>\\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, \\'_get_clarity_prompt\\'); print(\\'PASS: Method exists\\')\\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\\n    import requests\\nModuleNotFoundError: No module named \\'requests\\'\\n'}, {'command': 'python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt(\\'test\\'); assert isinstance(result, str); print(\\'PASS: Returns string\\')\"', 'passed': False, 'output': 'Traceback (most recent call last):\\n  File \"<string>\", line 1, in <module>\\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt(\\'test\\'); assert isinstance(result, str); print(\\'PASS: Returns string\\')\\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\\n    import requests\\nModuleNotFoundError: No module named \\'requests\\'\\n'}, {'command': 'python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt(\\'test instruction\\'); assert \\'test instruction\\' in result; print(\\'PASS: Contains instruction\\')\"', 'passed': False, 'output': 'Traceback (most recent call last):\\n  File \"<string>\", line 1, in <module>\\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt(\\'test instruction\\'); assert \\'test instruction\\' in result; print(\\'PASS: Contains instruction\\')\\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\\n    import requests\\nModuleNotFoundError: No module named \\'requests\\'\\n'}, {'command': 'python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt(\\'test\\'); assert len(result) < 2000; print(\\'PASS: Prompt length OK\\')\"', 'passed': False, 'output': 'Traceback (most recent call last):\\n  File \"<string>\", line 1, in <module>\\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s._get_clarity_prompt(\\'test\\'); assert len(result) < 2000; print(\\'PASS: Prompt length OK\\')\\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\\n    import requests\\nModuleNotFoundError: No module named \\'requests\\'\\n'}]}"
+  ]
+}

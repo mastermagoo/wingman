@@ -1,0 +1,44 @@
+{
+  "worker_id": "WORKER_003",
+  "worker_name": "Semantic Analyze Method Structure",
+  "status": "failed",
+  "deliverables_created": [
+    "validation/semantic_analyzer.py"
+  ],
+  "test_results": {
+    "all_passed": false,
+    "tests": [
+      {
+        "command": "python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, 'analyze'); print('PASS: Method exists')\"",
+        "passed": false,
+        "output": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, 'analyze'); print('PASS: Method exists')\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\n    import requests\nModuleNotFoundError: No module named 'requests'\n"
+      },
+      {
+        "command": "python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); import sys; s.analyze(''); sys.exit(0)\" 2>&1 | grep -q \"ValueError\" && echo \"PASS: Empty string rejected\" || echo \"FAIL: Empty string not rejected\"",
+        "passed": true,
+        "output": "FAIL: Empty string not rejected\n"
+      },
+      {
+        "command": "python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); import sys; s.analyze('x'*10001); sys.exit(0)\" 2>&1 | grep -q \"ValueError\" && echo \"PASS: Too long rejected\" || echo \"FAIL: Too long not rejected\"",
+        "passed": true,
+        "output": "FAIL: Too long not rejected\n"
+      },
+      {
+        "command": "python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s.analyze('Test instruction'); assert isinstance(result, dict); print('PASS: Returns dict')\"",
+        "passed": false,
+        "output": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s.analyze('Test instruction'); assert isinstance(result, dict); print('PASS: Returns dict')\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\n    import requests\nModuleNotFoundError: No module named 'requests'\n"
+      },
+      {
+        "command": "python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s.analyze('Test'); keys = ['risk_level', 'operation_types', 'blast_radius', 'reasoning', 'confidence']; assert all(k in result for k in keys); print('PASS: All required keys present')\"",
+        "passed": false,
+        "output": "Traceback (most recent call last):\n  File \"<string>\", line 1, in <module>\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s.analyze('Test'); keys = ['risk_level', 'operation_types', 'blast_radius', 'reasoning', 'confidence']; assert all(k in result for k in keys); print('PASS: All required keys present')\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\n    import requests\nModuleNotFoundError: No module named 'requests'\n"
+      }
+    ]
+  },
+  "duration_seconds": 20.159513,
+  "timestamp": "2026-02-04T16:47:11.733301",
+  "llm_provider": "openai",
+  "errors": [
+    "Validation failed: {'all_passed': False, 'tests': [{'command': 'python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, \\'analyze\\'); print(\\'PASS: Method exists\\')\"', 'passed': False, 'output': 'Traceback (most recent call last):\\n  File \"<string>\", line 1, in <module>\\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); assert hasattr(s, \\'analyze\\'); print(\\'PASS: Method exists\\')\\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\\n    import requests\\nModuleNotFoundError: No module named \\'requests\\'\\n'}, {'command': 'python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); import sys; s.analyze(\\'\\'); sys.exit(0)\" 2>&1 | grep -q \"ValueError\" && echo \"PASS: Empty string rejected\" || echo \"FAIL: Empty string not rejected\"', 'passed': True, 'output': 'FAIL: Empty string not rejected\\n'}, {'command': 'python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); import sys; s.analyze(\\'x\\'*10001); sys.exit(0)\" 2>&1 | grep -q \"ValueError\" && echo \"PASS: Too long rejected\" || echo \"FAIL: Too long not rejected\"', 'passed': True, 'output': 'FAIL: Too long not rejected\\n'}, {'command': 'python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s.analyze(\\'Test instruction\\'); assert isinstance(result, dict); print(\\'PASS: Returns dict\\')\"', 'passed': False, 'output': 'Traceback (most recent call last):\\n  File \"<string>\", line 1, in <module>\\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s.analyze(\\'Test instruction\\'); assert isinstance(result, dict); print(\\'PASS: Returns dict\\')\\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\\n    import requests\\nModuleNotFoundError: No module named \\'requests\\'\\n'}, {'command': 'python3 -c \"from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s.analyze(\\'Test\\'); keys = [\\'risk_level\\', \\'operation_types\\', \\'blast_radius\\', \\'reasoning\\', \\'confidence\\']; assert all(k in result for k in keys); print(\\'PASS: All required keys present\\')\"', 'passed': False, 'output': 'Traceback (most recent call last):\\n  File \"<string>\", line 1, in <module>\\n    from validation.semantic_analyzer import SemanticAnalyzer; s = SemanticAnalyzer(); result = s.analyze(\\'Test\\'); keys = [\\'risk_level\\', \\'operation_types\\', \\'blast_radius\\', \\'reasoning\\', \\'confidence\\']; assert all(k in result for k in keys); print(\\'PASS: All required keys present\\')\\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/Volumes/Data/ai_projects/wingman-system/wingman/validation/semantic_analyzer.py\", line 5, in <module>\\n    import requests\\nModuleNotFoundError: No module named \\'requests\\'\\n'}]}"
+  ]
+}

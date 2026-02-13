@@ -12,6 +12,7 @@
 
 - **Business strategy / roadmap (master)**: [AAA_WINGMAN_STRATEGY_ROADMAP.md](./00-Strategic/AAA_WINGMAN_STRATEGY_ROADMAP.md)
 - **Business case (enforcement layer)**: [AAA_WINGMAN_ENFORCEMENT_BUSINESS_CASE.md](./00-Strategic/AAA_WINGMAN_ENFORCEMENT_BUSINESS_CASE.md)
+- **Non-orchestrator build (doc plan)**: [AAA_NON_ORCHESTRATOR_BUILD_DOCUMENTATION_PLAN.md](./00-Strategic/AAA_NON_ORCHESTRATOR_BUILD_DOCUMENTATION_PLAN.md)
 
 ### Architecture (3 docs: current state, current build, gap/next)
 

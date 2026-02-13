@@ -25,6 +25,15 @@ This file is the **single source of truth** for how work is executed in this rep
    - **Why**: Other projects (intel-system, cv-automation, mem0, migration docs) may exist at root level but must NOT be committed to wingman repo
    - **If uncertain about git state**: Ask user before staging files
 
+15. **MEM0 NAMESPACE REQUIREMENT**: This repo has a dedicated mem0 namespace that MUST ALWAYS be used:
+   - **ALWAYS use user_id**: `wingman` for all mem0 operations
+   - **TEST environment**: `http://127.0.0.1:18888` (mem0_server_test)
+   - **PRD environment**: `http://127.0.0.1:8889` (mem0_server_prd)
+   - **Store worker retrospectives**: All AI worker executions must store retrospectives in mem0 (10-point framework point 9)
+   - **Store execution strategies**: All execution plans and monitoring data stored in mem0
+   - **Never use other namespaces**: intel-system, cv-automation have their own mem0 namespaces - do not cross-contaminate
+   - **API endpoint**: `POST http://127.0.0.1:18888/memories` with `user_id: "wingman"`
+
 ## ✅ Truth-build standards (how we work)
 - **Do what was asked; nothing more, nothing less.**
 - **Incremental**: small steps, each independently validated.
@@ -68,6 +77,16 @@ This repository contains the Wingman system and its Docker deployment stacks.
   - `wingman/docker-compose.prd.yml` (PRD stack)
 - `docker-compose-wingman.yml`: legacy/alternate compose (do not assume it is active unless explicitly used)
 - `docs/`: design and operational references (do not copy sensitive content into runtime configs)
+
+## Use the docker wrapper everywhere (mandatory)
+- **All** docker invocations (scripts, terminals, cron, agents) MUST go through the wrapper so destructive commands are blocked unless executed via Wingman approval + Execution Gateway.
+- **Setup**: Prepend `wingman/tools` to PATH so that `docker` resolves to the wrapper:
+  ```bash
+  export PATH="/path/to/wingman/tools:$PATH"
+  ```
+  Optionally set `DOCKER_BIN` to the real docker binary path if the wrapper’s fallback search fails (e.g. `export DOCKER_BIN=/usr/local/bin/docker`).
+- **Environments**: Use this in every environment where docker may be run (local shell profile, CI, IDE terminal). No bypass: scripts must not call the real docker binary directly for destructive operations.
+- Wrapper script: `tools/docker-wrapper.sh`; shim: `tools/docker` (invoked when `docker` is run with tools first in PATH).
 
 ## Docker Compose conventions
 - Always use Compose v2:

@@ -1,0 +1,34 @@
+{
+  "worker_id": "WORKER_006",
+  "worker_name": "Semantic Error Handling",
+  "status": "failed",
+  "deliverables_created": [
+    "validation/semantic_analyzer.py"
+  ],
+  "test_results": {
+    "all_passed": false,
+    "tests": [
+      {
+        "command": "python3 -c \"\nfrom validation.semantic_analyzer import SemanticAnalyzer\nimport requests\nfrom unittest.mock import patch\ns = SemanticAnalyzer()\nwith patch('requests.post', side_effect=requests.Timeout('timeout')):\nresult = s.analyze('test instruction')\nassert result is not None\nassert 'risk_level' in result\nprint('PASS: Timeout handled gracefully')\n\"",
+        "passed": false,
+        "output": "  File \"<string>\", line 7\n    result = s.analyze('test instruction')\n    ^^^^^^\nIndentationError: expected an indented block after 'with' statement on line 6\n"
+      },
+      {
+        "command": "python3 -c \"\nfrom validation.semantic_analyzer import SemanticAnalyzer\nfrom unittest.mock import Mock, patch\ns = SemanticAnalyzer()\nmock_response = Mock()\nmock_response.json.return_value = {'response': 'not valid json format'}\nwith patch('requests.post', return_value=mock_response):\nresult = s.analyze('test')\nassert result is not None\nprint('PASS: Invalid JSON handled')\n\"",
+        "passed": false,
+        "output": "  File \"<string>\", line 8\n    result = s.analyze('test')\n    ^^^^^^\nIndentationError: expected an indented block after 'with' statement on line 7\n"
+      },
+      {
+        "command": "python3 -c \"\nfrom validation.semantic_analyzer import SemanticAnalyzer\nimport requests\nfrom unittest.mock import patch\ns = SemanticAnalyzer()\nwith patch('requests.post', side_effect=requests.ConnectionError('network error')):\nresult = s.analyze('test instruction')\nassert result is not None\nassert 'confidence' in result\nassert result['confidence'] < 0.5  # Low confidence for fallback\nprint('PASS: Connection error handled')\n\"",
+        "passed": false,
+        "output": "  File \"<string>\", line 7\n    result = s.analyze('test instruction')\n    ^^^^^^\nIndentationError: expected an indented block after 'with' statement on line 6\n"
+      }
+    ]
+  },
+  "duration_seconds": 38.474124,
+  "timestamp": "2026-02-04T16:48:52.041237",
+  "llm_provider": "openai",
+  "errors": [
+    "Validation failed: {'all_passed': False, 'tests': [{'command': 'python3 -c \"\\nfrom validation.semantic_analyzer import SemanticAnalyzer\\nimport requests\\nfrom unittest.mock import patch\\ns = SemanticAnalyzer()\\nwith patch(\\'requests.post\\', side_effect=requests.Timeout(\\'timeout\\')):\\nresult = s.analyze(\\'test instruction\\')\\nassert result is not None\\nassert \\'risk_level\\' in result\\nprint(\\'PASS: Timeout handled gracefully\\')\\n\"', 'passed': False, 'output': '  File \"<string>\", line 7\\n    result = s.analyze(\\'test instruction\\')\\n    ^^^^^^\\nIndentationError: expected an indented block after \\'with\\' statement on line 6\\n'}, {'command': 'python3 -c \"\\nfrom validation.semantic_analyzer import SemanticAnalyzer\\nfrom unittest.mock import Mock, patch\\ns = SemanticAnalyzer()\\nmock_response = Mock()\\nmock_response.json.return_value = {\\'response\\': \\'not valid json format\\'}\\nwith patch(\\'requests.post\\', return_value=mock_response):\\nresult = s.analyze(\\'test\\')\\nassert result is not None\\nprint(\\'PASS: Invalid JSON handled\\')\\n\"', 'passed': False, 'output': '  File \"<string>\", line 8\\n    result = s.analyze(\\'test\\')\\n    ^^^^^^\\nIndentationError: expected an indented block after \\'with\\' statement on line 7\\n'}, {'command': 'python3 -c \"\\nfrom validation.semantic_analyzer import SemanticAnalyzer\\nimport requests\\nfrom unittest.mock import patch\\ns = SemanticAnalyzer()\\nwith patch(\\'requests.post\\', side_effect=requests.ConnectionError(\\'network error\\')):\\nresult = s.analyze(\\'test instruction\\')\\nassert result is not None\\nassert \\'confidence\\' in result\\nassert result[\\'confidence\\'] < 0.5  # Low confidence for fallback\\nprint(\\'PASS: Connection error handled\\')\\n\"', 'passed': False, 'output': '  File \"<string>\", line 7\\n    result = s.analyze(\\'test instruction\\')\\n    ^^^^^^\\nIndentationError: expected an indented block after \\'with\\' statement on line 6\\n'}]}"
+  ]
+}

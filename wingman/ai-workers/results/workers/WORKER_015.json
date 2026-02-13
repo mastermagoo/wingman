@@ -1,0 +1,24 @@
+{
+  "worker_id": "WORKER_015",
+  "worker_name": "Semantic Tests Coherence",
+  "status": "failed",
+  "deliverables_created": [
+    "tests/validation/test_semantic_analyzer.py"
+  ],
+  "test_results": {
+    "all_passed": false,
+    "tests": [
+      {
+        "command": "pytest tests/validation/test_semantic_analyzer.py -v",
+        "passed": false,
+        "output": ""
+      }
+    ]
+  },
+  "duration_seconds": 28.46469,
+  "timestamp": "2026-02-04T16:57:13.303547",
+  "llm_provider": "openai",
+  "errors": [
+    "Validation failed: {'all_passed': False, 'tests': [{'command': 'pytest tests/validation/test_semantic_analyzer.py -v', 'passed': False, 'output': ''}]}"
+  ]
+}

@@ -5,7 +5,7 @@
 **Scope**: Wingman deployment documentation (DEV/TEST/PRD)  
 
 **Date**: 2026-01-12
-**Baseline Document**: `VALIDATION_ENHANCEMENT_DEPLOYMENT_PLAN.md`
+**Baseline Document**: `AAA_VALIDATION_ENHANCEMENT_DEPLOYMENT_PLAN.md`
 **Current Branch**: `test` (with PRD changes merged from `main`)
 **Report Generated**: After TEST configuration clone, before TEST environment rebuild
 
@@ -29,7 +29,7 @@ The Wingman system has completed **Phase 0 (Execution Gateway)** and created the
 | **Phase 1** | Dependency Analyzer | ❌ **NOT STARTED** | `dependency_analyzer.py` missing |
 | **Phase 2** | Content Quality Validator | ❌ **NOT STARTED** | `content_quality_validator.py` missing |
 | **Phase 3** | Integration | ❌ **NOT STARTED** | Validators not integrated into approval flow |
-| **Phase 4** | Testing (203 tests) | ❌ **NOT STARTED** | No validator tests exist |
+| **Phase 4** | Testing (203 tests) | 🟡 **PARTIAL (stubs only)** | `tests/validation/` exists; tests currently skipped pending validator implementations |
 | **Phase 5** | Deployment | ⏸️ **BLOCKED** | Cannot deploy until Phase 1-4 complete |
 | **Phase 6** | Post-Deployment Tuning | ⏸️ **BLOCKED** | Cannot tune until deployed |
 
@@ -84,7 +84,7 @@ Docker Command Execution
 
 ### ✅ Phase 0 Complete: Execution Gateway (PRD)
 
-**File**: `/wingman/execution_gateway.py`
+**File**: `execution_gateway.py`
 **Status**: ✅ **DEPLOYED AND TESTED IN PRD**
 **Test Results**: All 8 security tests passed (2026-01-12)
 
@@ -142,7 +142,7 @@ execution-gateway:
 
 ### ✅ Phase 0 Complete: Basic 10-Point Validator
 
-**File**: `/wingman/instruction_validator.py`
+**File**: `instruction_validator.py`
 **Status**: ✅ **IMPLEMENTED**
 **Lines of Code**: 41
 
@@ -182,32 +182,29 @@ class InstructionValidator:
 
 ### ✅ Phase 0 Complete: Validation Package Structure
 
-**File**: `/wingman/validation/__init__.py`
+**File**: `validation/__init__.py`
 **Status**: ✅ **STRUCTURE CREATED**
-**Lines of Code**: 52 (with duplicates)
+**Lines of Code**: 12
 
-**Current Exports**:
+**Current Exports**: none (import-safe stub; does not import missing validator modules)
 ```python
-from .semantic_analyzer import analyze_instruction as analyze_semantic_instruction
-from .content_quality_validator import assess_content_quality
-from .code_scanner import scan_code
-from .dependency_analyzer import analyze_dependencies
+__all__ = []
 ```
 
-**Problem**: These imports will FAIL because the actual implementation files don't exist:
-```bash
-$ ls -la wingman/validation/
-total 72
-drwx------  1 kermit  staff  16384 Jan 12 19:52 .
-drwx------  1 kermit  staff  16384 Jan 12 19:56 ..
--rwx------  1 kermit  staff   1534 Jan 12 19:52 __init__.py
-```
+**Status**: ✅ Importing `validation` is safe today; validator modules will be added in Phase 1/2.
 
-**Missing Files**:
-- ❌ `semantic_analyzer.py` (0 bytes, 0 lines, 0 functions)
-- ❌ `code_scanner.py` (0 bytes, 0 lines, 0 functions)
-- ❌ `dependency_analyzer.py` (0 bytes, 0 lines, 0 functions)
-- ❌ `content_quality_validator.py` (0 bytes, 0 lines, 0 functions)
+**Missing validator modules (not yet implemented)**:
+- ❌ `validation/semantic_analyzer.py`
+- ❌ `validation/code_scanner.py`
+- ❌ `validation/dependency_analyzer.py`
+- ❌ `validation/content_quality_validator.py`
+
+**Existing test scaffolding (currently skipped)**:
+- `tests/validation/test_semantic_analyzer.py`
+- `tests/validation/test_code_scanner.py`
+- `tests/validation/test_dependency_analyzer.py`
+- `tests/validation/test_content_quality.py`
+- `tests/validation/fixtures.py`
 
 ---
 
@@ -219,28 +216,79 @@ drwx------  1 kermit  staff  16384 Jan 12 19:56 ..
 **Current Status**: 0 hours invested
 **Completion**: 0%
 
-#### Missing: semantic_analyzer.py
-**Planned Features**:
-- LLM-based semantic understanding via Mistral 7B
-- Detect HIGH risk operations even if labeled "low"
-- Identify destructive operations hidden in benign descriptions
-- Retry logic with fallback to heuristic if LLM times out
-- Output: Risk level, operation types, blast radius estimate
+#### Missing: `validation/semantic_analyzer.py` (Phase 1A — Semantic Analyzer)
 
-**Planned Lines of Code**: ~250-300 lines
-**Current Lines of Code**: 0
-**Tests Planned**: 10+ test cases
-**Tests Written**: 0
+**Baseline facts (verified)**:
+- `validation/semantic_analyzer.py` **does not exist** yet.
+- `tests/validation/test_semantic_analyzer.py` **exists** but is currently a **stub** (tests are skipped until the module exists).
+- `tests/validation/fixtures.py` already includes `SEMANTIC_ANALYZER_TEST_CASES` (initial ground-truth fixtures).
+- TEST stack uses **shared host Ollama** (not an `ollama` container). Container access is via `OLLAMA_HOST`/`OLLAMA_PORT` (see `docker-compose.yml`).
 
-**Example Use Case**:
-```python
-# Should detect this as HIGH risk even though labeled "low"
-result = analyze_instruction(
-    instruction="RISK_ASSESSMENT: Low. Commands: docker restart wingman-api",
-    task_name="Quick restart",
-    deployment_env="prd"
-)
-# Expected: {"risk_level": "HIGH", "reason": "docker restart on PRD"}
+**Deliverables (SMART for `semantic_analyzer`)**
+
+- **S (Specific)**:
+  - Create `validation/semantic_analyzer.py` implementing:
+    - `class SemanticAnalyzer`
+    - `SemanticAnalyzer.analyze(instruction: str, task_name: str = "", deployment_env: str = "") -> dict`
+    - A safe LLM call path to Ollama (`/api/generate`, `stream: false`) with **timeouts** + **retry** + **heuristic fallback**
+    - A stable output schema with keys: `risk_level`, `operation_types`, `blast_radius`, `reasoning`, `confidence`
+- **M (Measurable)**:
+  - `python3 -c "from validation.semantic_analyzer import SemanticAnalyzer; print('ok')"` prints `ok`
+  - `pytest -q tests/validation/test_semantic_analyzer.py` exits `0` (no skips)
+  - The fixtures in `tests/validation/fixtures.py::SEMANTIC_ANALYZER_TEST_CASES` produce expected `risk_level` values (e.g. PRD restart = HIGH)
+  - LLM call hard-timeouts (no hangs): <= 30 seconds per attempt; fallback returns a valid dict
+- **A (Achievable)**:
+  - Implementation is scoped to Phase 1A only (no composite scoring, no approval-flow integration changes in this phase)
+  - Non-LLM unit tests use mocks; only LLM-marked tests require live Ollama
+- **R (Relevant)**:
+  - Closes the “presence checks only” gap by identifying **real operational risk** even when the request labels it “Low”
+- **T (Time-bound)**:
+  - Delivered as Phase 1A: build → unit tests → deploy(TEST) → evidence, before starting any other validator
+
+**Deliverable breakdown (Phase 1A work instructions)**:
+- **WORKER_001–006** (core structure): `validation/semantic_analyzer.py`
+  - Class skeleton + constructor config
+  - Ollama connectivity check method
+  - `analyze()` structure + input validation
+  - Score calculation + normalization
+  - Reasoning dict schema
+  - Error handling + fallback wiring
+- **WORKER_007–012** (prompt + parsing + heuristics): `validation/semantic_analyzer.py`
+  - Clarity/completeness/coherence prompt builders
+  - JSON extraction/parsing
+  - Heuristic fallback scoring
+  - Consistency check (variance threshold)
+- **WORKER_013–018** (tests): `tests/validation/test_semantic_analyzer.py`
+  - 23 tests across clarity/completeness/coherence/edge/error/integration
+
+**Source of truth**: `ai-workers/workers/WORKER_001_*.md` through `WORKER_018_*.md`
+
+**Measurable test + deployment checklist (Phase 1A)**
+
+```bash
+# From the wingman/ directory
+cd /Volumes/Data/ai_projects/wingman-system/wingman
+
+# 1) Baseline verification (expected today)
+test -f validation/semantic_analyzer.py && echo "UNEXPECTED: semantic_analyzer.py already exists" || echo "OK: semantic_analyzer.py missing (baseline)"
+pytest -q tests/validation/test_semantic_analyzer.py || true
+
+# 2) After implementation: unit tests must be green (no skips)
+pytest -q tests/validation/test_semantic_analyzer.py
+
+# 3) Deploy to TEST (DESTRUCTIVE → approval-gated)
+# Request approval first (do NOT print keys; load from your local env/.env.test):
+curl -s -X POST http://127.0.0.1:8101/approvals/request \
+ -H "Content-Type: application/json" \
+ -H "X-Wingman-Approval-Request-Key: ${WINGMAN_APPROVAL_REQUEST_KEY}" \
+ -d '{"worker_id":"phase1a_semantic","task_name":"Deploy Semantic Analyzer to TEST","instruction":"docker compose -f docker-compose.yml -p wingman-test --env-file .env.test up -d --build wingman-api","deployment_env":"test"}'
+
+# Approve in Telegram, then deploy:
+docker compose -f docker-compose.yml -p wingman-test --env-file .env.test up -d --build wingman-api
+
+# 4) Runtime smoke check (inside container; no secrets printed)
+docker compose -f docker-compose.yml -p wingman-test exec -T wingman-api \
+ python -c "from validation.semantic_analyzer import SemanticAnalyzer; s=SemanticAnalyzer(); r=s.analyze('DELIVERABLES: Read logs\\nSUCCESS_CRITERIA: Print last 100 lines\\n...','smoke','test'); assert isinstance(r,dict); print('ok')"
 ```
 
 #### Missing: code_scanner.py
@@ -501,18 +549,18 @@ execution-gateway:
 | execution-gateway | 5001 | 5002 | Standard gateway port |
 | postgres | (internal) | (internal) | Not published to host |
 | redis | (internal) | (internal) | Not published to host |
-| ollama | (internal) | (internal) | Not published to host |
+| ollama | (shared host) | (shared host) | Not a compose service; accessed via `OLLAMA_HOST`/`OLLAMA_PORT` |
 
 **Environment Variables** (TEST):
 - File: `.env.test` (local-only, not committed)
 - Required: `GATEWAY_JWT_SECRET`, `POSTGRES_PASSWORD`, `BOT_TOKEN`, `CHAT_ID`
 - Status: ✅ File exists (verified by user)
 
-**Next Steps for TEST**:
-1. ⏳ Rebuild TEST environment: `docker compose -f wingman/docker-compose.yml -p wingman-test --env-file .env.test up -d --build`
-2. ⏳ Verify all 6 containers healthy (api, gateway, bot, watcher, postgres, redis, ollama)
-3. ⏳ Run execution gateway tests in TEST (same 8 tests as PRD)
-4. ⏳ Push updated TEST branch to GitHub
+**Next Steps for TEST** (approval-gated where destructive):
+1. ⏳ Rebuild TEST environment (DESTRUCTIVE → approval-gated; request via `POST /approvals/request` first): `cd /Volumes/Data/ai_projects/wingman-system/wingman && docker compose -f docker-compose.yml -p wingman-test --env-file .env.test up -d --build`
+2. ⏳ Verify all 6 containers healthy (wingman-api, execution-gateway, telegram-bot, wingman-watcher, postgres, redis). **Ollama is shared host**, not a container in this stack.
+3. ⏳ Run execution gateway tests in TEST (same 8 tests as PRD): `bash tools/test_execution_gateway.sh test`
+4. ⏳ Push updated TEST branch only if explicitly instructed: **"push to github"**
 
 ---
 
@@ -632,19 +680,19 @@ a7f8e2c feat: execution gateway configuration for TEST environment
    - Rebuild TEST containers with `--build` flag
    - Verify all 6 services reach healthy status
    - Run execution gateway test suite (8 tests)
-   - Push test branch to GitHub
+   - Push test branch to GitHub only if explicitly instructed: **"push to github"**
    - **Why**: Validates TEST is ready for validator development
 
 2. **📋 Validate Deployment Plan Assumptions**
-   - Confirm Ollama/Mistral 7B available in TEST
+   - Confirm Ollama reachable in TEST and chosen model is available (do not assume mistral:7b)
    - Verify LLM response time (<30s for typical request)
    - Test LLM JSON output consistency (same prompt, 5 trials)
    - **Why**: LLM performance assumptions drive validator design
 
-3. **🔧 Fix Validation Package Imports**
-   - Option A: Remove imports from `validation/__init__.py` until files exist
-   - Option B: Create stub files that return `{"status": "NOT_IMPLEMENTED"}`
-   - **Why**: Prevents import errors if code tries to use validators
+3. **✅ Validation package import safety (already fixed)**
+   - `validation/__init__.py` must remain import-safe until validator modules exist (no eager imports)
+   - Quick check: `python3 -c "import validation; print('ok')"`
+   - **Why**: Prevents import errors if code tries to import `validation` before Phase 1/2 land
 
 ### Short-Term Actions (Next Week)
 
@@ -826,5 +874,8 @@ However, **none of the 4 core validators** from the deployment plan have been im
 ---
 
 **Report End**
+**Generated**: 2026-01-12
+**Next Update**: After TEST environment deployment
+month---**Report End**
 **Generated**: 2026-01-12
 **Next Update**: After TEST environment deployment
