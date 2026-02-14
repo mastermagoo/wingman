@@ -191,16 +191,27 @@ class ServiceDeployerAgent:
     def start_docker_services(self):
         log(f"🐳 {self.name}: Starting Docker services...")
 
+        # PHASE 5: Use docker wrapper for all docker commands
+        # Wrapper blocks destructive commands unless via Execution Gateway
+        wrapper_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            "tools", "docker-wrapper.sh"
+        )
+
+        # Ensure wrapper exists, otherwise fall back to 'docker' (assumes wrapper in PATH)
+        docker_cmd = wrapper_path if os.path.exists(wrapper_path) else "docker"
+
         # Stop any conflicting containers
-        subprocess.run(["docker", "stop", "redis", "postgres", "neo4j"],
+        # NOTE: These are destructive commands - wrapper will block them unless approved
+        subprocess.run([docker_cmd, "stop", "redis", "postgres", "neo4j"],
                       stderr=subprocess.DEVNULL)
-        subprocess.run(["docker", "rm", "redis", "postgres", "neo4j"],
+        subprocess.run([docker_cmd, "rm", "redis", "postgres", "neo4j"],
                       stderr=subprocess.DEVNULL)
 
         # Start Redis
         try:
             subprocess.run([
-                "docker", "run", "-d",
+                docker_cmd, "run", "-d",
                 "--name", "intel-redis",
                 "-p", "6379:6379",
                 "redis:7-alpine"

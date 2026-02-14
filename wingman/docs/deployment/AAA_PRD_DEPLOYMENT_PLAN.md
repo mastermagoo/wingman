@@ -1,11 +1,11 @@
 # Wingman PRD Execution Gateway Deployment Plan
-**Status**: CURRENT  
-**Last Updated**: 2026-01-17  
-**Version**: 1.0  
-**Scope**: Wingman deployment documentation (DEV/TEST/PRD)  
+**Status**: CURRENT
+**Last Updated**: 2026-02-14
+**Version**: 1.1
+**Scope**: Wingman deployment documentation (DEV/TEST/PRD)
 
-**Date:** 2026-01-10  
-**Status:** Ready for Approval  
+**Date:** 2026-01-10
+**Status:** Ready for Approval
 **Environment:** PRD (Mac Studio)
 
 ---
@@ -16,8 +16,43 @@ Deploy Execution Gateway to PRD environment with full HITL approval gates, match
 
 ---
 
+## ⚠️ **MANDATORY PREREQUISITE: Docker Wrapper Setup**
+
+**CRITICAL**: Before executing ANY docker commands in this runbook, you MUST have the Docker wrapper active.
+
+### Setup Instructions:
+
+```bash
+# 1. Add wrapper to PATH (one-time per shell session)
+export PATH="/Volumes/Data/ai_projects/wingman-system/wingman/tools:$PATH"
+export DOCKER_BIN="/Users/kermit/.orbstack/bin/docker"
+
+# 2. Verify wrapper is active
+which docker
+# Expected: /Volumes/Data/ai_projects/wingman-system/wingman/tools/docker
+
+# 3. Test wrapper blocks destructive commands
+docker stop test
+# Expected: ❌ BLOCKED: Destructive docker command requires Wingman approval
+```
+
+### Permanent Setup (Recommended):
+
+Add to `~/.zshrc` or `~/.bashrc`:
+```bash
+export PATH="/Volumes/Data/ai_projects/wingman-system/wingman/tools:$PATH"
+export DOCKER_BIN="/Users/kermit/.orbstack/bin/docker"
+```
+
+**Why Required**: The wrapper enforces infrastructure-level protection. All destructive docker commands must go through Wingman approval + Execution Gateway. Without the wrapper, commands bypass this protection.
+
+**See**: [Docker Wrapper Audit Report](../03-operations/DOCKER_WRAPPER_AUDIT.md)
+
+---
+
 ## ✅ **PREREQUISITES**
 
+- [x] **Docker wrapper setup complete** (see above - MANDATORY)
 - [x] TEST environment validated (Stages A-E complete)
 - [x] Execution gateway working in TEST
 - [x] Privilege separation verified

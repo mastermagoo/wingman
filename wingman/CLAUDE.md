@@ -78,15 +78,132 @@ This repository contains the Wingman system and its Docker deployment stacks.
 - `docker-compose-wingman.yml`: legacy/alternate compose (do not assume it is active unless explicitly used)
 - `docs/`: design and operational references (do not copy sensitive content into runtime configs)
 
-## Use the docker wrapper everywhere (mandatory)
-- **All** docker invocations (scripts, terminals, cron, agents) MUST go through the wrapper so destructive commands are blocked unless executed via Wingman approval + Execution Gateway.
-- **Setup**: Prepend `wingman/tools` to PATH so that `docker` resolves to the wrapper:
-  ```bash
-  export PATH="/path/to/wingman/tools:$PATH"
-  ```
-  Optionally set `DOCKER_BIN` to the real docker binary path if the wrapper’s fallback search fails (e.g. `export DOCKER_BIN=/usr/local/bin/docker`).
-- **Environments**: Use this in every environment where docker may be run (local shell profile, CI, IDE terminal). No bypass: scripts must not call the real docker binary directly for destructive operations.
-- Wrapper script: `tools/docker-wrapper.sh`; shim: `tools/docker` (invoked when `docker` is run with tools first in PATH).
+## Docker Wrapper (MANDATORY - Phase 5 Enforcement)
+
+**CRITICAL RULE**: ALL docker/compose invocations MUST use the wrapper (`tools/docker-wrapper.sh`). This is **non-negotiable** infrastructure-level protection.
+
+### Why Required
+
+The Docker wrapper provides **Layer 2 protection** (infrastructure block) in the three-layer security model:
+- **Layer 1 (Strongest)**: Container isolation - only `execution-gateway` has docker socket
+- **Layer 2 (This wrapper)**: Infrastructure block - shell-level protection for operators/scripts
+- **Layer 3**: Application logic - Wingman API approval flow + Execution Gateway
+
+Without the wrapper active, destructive docker commands bypass approval gates.
+
+### Mandatory Setup (Every Environment)
+
+**One-time per shell session**:
+```bash
+export PATH="/Volumes/Data/ai_projects/wingman-system/wingman/tools:$PATH"
+export DOCKER_BIN="/Users/kermit/.orbstack/bin/docker"
+```
+
+**Permanent setup** (add to `~/.zshrc` or `~/.bashrc`):
+```bash
+# Wingman Docker Wrapper (MANDATORY)
+export PATH="/Volumes/Data/ai_projects/wingman-system/wingman/tools:$PATH"
+export DOCKER_BIN="/Users/kermit/.orbstack/bin/docker"
+```
+
+### Verification Steps
+
+```bash
+# 1. Check wrapper is in PATH
+which docker
+# Expected: /Volumes/Data/ai_projects/wingman-system/wingman/tools/docker
+
+# 2. Test safe command (should work)
+docker ps
+
+# 3. Test destructive command (should be blocked)
+docker stop test-container
+# Expected: ❌ BLOCKED: Destructive docker command requires Wingman approval
+```
+
+### Enforcement in Scripts
+
+All deployment/operations scripts MUST set PATH at the top:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+# MANDATORY: Docker wrapper enforcement
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PATH="${SCRIPT_DIR}/tools:${PATH}"
+export DOCKER_BIN="${DOCKER_BIN:-/Users/kermit/.orbstack/bin/docker}"
+
+# ... rest of script
+```
+
+**Files already refactored** (Phase 5):
+- ✅ `deploy_test_to_prd.sh`
+- ✅ `deploy.sh`
+- ✅ `ai-workers/scripts/AUTONOMOUS_DEPLOY_FIX.py`
+- ✅ `ai-workers/scripts/orchestration/AUTONOMOUS_DEPLOY_FIX.py`
+
+### Python subprocess calls
+
+When calling docker from Python, use wrapper path:
+
+```python
+import os
+import subprocess
+
+# Use wrapper for all docker commands
+wrapper_path = os.path.join(
+    os.path.dirname(__file__),
+    "tools", "docker-wrapper.sh"
+)
+
+# All docker subprocess calls must use wrapper_path
+subprocess.run([wrapper_path, "stop", "container"])
+```
+
+### What the Wrapper Blocks
+
+**Destructive commands** (require approval):
+- `stop`, `rm`, `down`, `kill`, `restart`, `build`
+- `compose down`, `compose stop`, `compose rm`, `compose kill`
+- `system prune`, `volume rm`, `network rm`, `image rm`
+- `container rm`, `container stop`, `container kill`
+
+**Safe commands** (allowed):
+- `ps`, `logs`, `version`, `info`, `inspect`
+- `compose ps`, `compose logs`, `compose config`
+
+### Bypass Prevention
+
+**PROHIBITED**: Do NOT bypass wrapper with absolute paths:
+
+```bash
+# ❌ WRONG - bypasses wrapper
+/usr/bin/docker stop container
+/usr/local/bin/docker rm container
+
+# ✅ CORRECT - uses wrapper
+docker stop container  # (will be blocked and require approval)
+```
+
+**Enforcement**: Code reviews MUST flag any absolute paths to docker binaries.
+
+### Approval Flow for Blocked Commands
+
+When wrapper blocks a command:
+1. Submit approval request to Wingman API: `POST /approvals/request`
+2. Wait for approval via Telegram
+3. Execute via Execution Gateway with capability token
+4. Command is logged in audit trail (Postgres `execution_audit` table)
+
+**See**:
+- Wrapper audit: `docs/03-operations/DOCKER_WRAPPER_AUDIT.md`
+- Operations runbook: `docs/03-operations/AAA_WINGMAN_OPERATIONS_DEPLOYMENT_RUNBOOK.md`
+- PRD deployment plan: `docs/deployment/AAA_PRD_DEPLOYMENT_PLAN.md`
+
+**Wrapper location**:
+- Script: `tools/docker-wrapper.sh`
+- Shim: `tools/docker` (symlink/wrapper invoked when `docker` is in PATH)
 
 ## Docker Compose conventions
 - Always use Compose v2:

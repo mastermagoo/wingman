@@ -9,6 +9,47 @@
 
 set -euo pipefail  # Exit on error, undefined vars, pipe failures
 
+################################################################################
+# MANDATORY: Docker Wrapper Enforcement (Phase 5)
+################################################################################
+# All docker commands MUST use wrapper to enforce approval gates.
+# Wrapper blocks destructive commands unless executed via Execution Gateway.
+
+SCRIPT_DIR_WRAPPER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WRAPPER_DIR="${SCRIPT_DIR_WRAPPER}/tools"
+
+# Prepend wrapper to PATH so 'docker' resolves to wrapper first
+export PATH="${WRAPPER_DIR}:${PATH}"
+
+# Set DOCKER_BIN if not already set (wrapper needs to know where real docker is)
+if [[ -z "${DOCKER_BIN:-}" ]]; then
+    # Try common locations for real docker binary
+    for candidate in /usr/local/bin/docker /opt/homebrew/bin/docker "${HOME}/.orbstack/bin/docker" /usr/bin/docker; do
+        if [[ -x "$candidate" ]]; then
+            export DOCKER_BIN="$candidate"
+            break
+        fi
+    done
+fi
+
+# Verify wrapper is active
+DOCKER_CMD="$(command -v docker 2>/dev/null || echo '')"
+if [[ -z "$DOCKER_CMD" ]]; then
+    echo "❌ ERROR: docker command not found. Install Docker or check PATH." >&2
+    exit 1
+fi
+
+if [[ "$DOCKER_CMD" != *"/tools/docker"* ]] && [[ "$DOCKER_CMD" != *"docker-wrapper"* ]]; then
+    echo "⚠️  WARNING: docker command may not be using wrapper" >&2
+    echo "   Current: $DOCKER_CMD" >&2
+    echo "   Expected: ${WRAPPER_DIR}/docker (wrapper shim)" >&2
+    echo "   Wrapper enforcement may not be active. Proceeding anyway..." >&2
+fi
+
+################################################################################
+# End Docker Wrapper Enforcement
+################################################################################
+
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_FILE="/tmp/wingman_test_to_prd_$(date +%Y%m%d_%H%M%S).log"

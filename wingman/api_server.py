@@ -335,10 +335,44 @@ def log_claim():
         return jsonify({"error": str(e)}), 500
 
 
+def is_quarantined(worker_id: str) -> dict:
+    """
+    Check if worker is quarantined (Phase 4 Watcher Enhancement).
+
+    Returns:
+        {"quarantined": False} if not quarantined
+        {"quarantined": True, "reason": "...", "quarantined_at": "..."} if quarantined
+    """
+    try:
+        import redis
+        r = redis.Redis(
+            host=os.getenv("REDIS_HOST", "redis"),
+            port=int(os.getenv("REDIS_PORT", "6379")),
+            db=0,
+            decode_responses=True
+        )
+
+        if r.sismember("quarantined_workers", worker_id):
+            metadata = r.hgetall(f"quarantine:{worker_id}")
+            return {
+                "quarantined": True,
+                "reason": metadata.get("reason", "Unknown"),
+                "quarantined_at": metadata.get("quarantined_at", "Unknown"),
+                "environment": metadata.get("environment", "Unknown")
+            }
+        return {"quarantined": False}
+    except Exception as e:
+        print(f"⚠️ Quarantine check failed: {e}")
+        # Fail open (allow request) to avoid breaking service
+        return {"quarantined": False}
+
+
 @app.route("/approvals/request", methods=["POST"])
 def approvals_request():
     """
-    Phase 4 (Original): Request human approval before proceeding with high-risk work.
+    Phase 4 (Enhanced): Request human approval before proceeding with high-risk work.
+
+    Enhanced with quarantine check (Phase 4 Watcher).
 
     Body:
       {
@@ -358,6 +392,18 @@ def approvals_request():
         worker_id = str(data.get("worker_id", "unknown"))
         task_name = (data.get("task_name") or "").strip()
         deployment_env = (data.get("deployment_env") or os.getenv("DEPLOYMENT_ENV", "")).strip()
+
+        # Phase 4 Enhancement: Check quarantine FIRST
+        quarantine_status = is_quarantined(worker_id)
+        if quarantine_status["quarantined"]:
+            return jsonify({
+                "needs_approval": False,
+                "status": "AUTO_REJECTED",
+                "reason": f"Worker quarantined: {quarantine_status['reason']}",
+                "quarantined_at": quarantine_status["quarantined_at"],
+                "environment": quarantine_status.get("environment", "Unknown"),
+                "message": "Contact Mark to release this worker via /release_worker command or POST /watcher/release/{worker_id}"
+            }), 403
 
         if not instruction:
             return jsonify({"error": "Missing 'instruction' field"}), 400
@@ -694,6 +740,223 @@ def get_stats():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/watcher/acknowledge/<alert_id>", methods=["POST"])
+def watcher_acknowledge(alert_id: str):
+    """
+    Acknowledge a watcher alert (Phase 4 Watcher Enhancement).
+
+    Body:
+      {
+        "acknowledged_by": "mark@example.com"  # optional
+      }
+    """
+    auth = _require_approval_decide()  # Require DECIDE key
+    if auth is not None:
+        return auth
+
+    try:
+        data = request.get_json() or {}
+        acknowledged_by = (data.get("acknowledged_by") or "").strip() or None
+
+        # Update database
+        import psycopg2
+        conn = psycopg2.connect(
+            host=os.getenv("DB_HOST", "postgres"),
+            port=int(os.getenv("DB_PORT", "5432")),
+            dbname=os.getenv("DB_NAME", "wingman"),
+            user=os.getenv("DB_USER", "wingman"),
+            password=os.getenv("DB_PASSWORD", "")
+        )
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE watcher_alerts
+            SET acknowledged_at = NOW(), acknowledged_by = %s
+            WHERE alert_id = %s AND acknowledged_at IS NULL
+            RETURNING alert_id, acknowledged_at
+        """, (acknowledged_by, alert_id))
+        result = cursor.fetchone()
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        if not result:
+            return jsonify({"error": "Alert not found or already acknowledged"}), 404
+
+        return jsonify({
+            "success": True,
+            "alert_id": str(result[0]),
+            "acknowledged_at": result[1].isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/watcher/alerts", methods=["GET"])
+def watcher_alerts():
+    """
+    Get watcher alert history (Phase 4 Watcher Enhancement).
+
+    Query params:
+      - severity: Filter by severity (CRITICAL/HIGH/MEDIUM/LOW)
+      - since: ISO timestamp (e.g., 2026-02-01T00:00:00)
+      - limit: Max results (default 50, max 500)
+      - worker_id: Filter by worker
+      - unacknowledged: Only unacknowledged alerts (true/false)
+    """
+    auth = _require_approval_read()  # Require READ key
+    if auth is not None:
+        return auth
+
+    try:
+        severity = request.args.get("severity", "").upper()
+        since = request.args.get("since", "")
+        limit = min(int(request.args.get("limit", "50")), 500)
+        worker_id = request.args.get("worker_id", "")
+        unacknowledged = request.args.get("unacknowledged", "").lower() == "true"
+
+        # Build query
+        query = "SELECT alert_id, event_type, worker_id, severity, message, sent_at, acknowledged_at, acknowledged_by, environment FROM watcher_alerts WHERE 1=1"
+        params = []
+
+        if severity and severity in ["CRITICAL", "HIGH", "MEDIUM", "LOW"]:
+            query += " AND severity = %s"
+            params.append(severity)
+
+        if since:
+            query += " AND sent_at >= %s"
+            params.append(since)
+
+        if worker_id:
+            query += " AND worker_id = %s"
+            params.append(worker_id)
+
+        if unacknowledged:
+            query += " AND acknowledged_at IS NULL"
+
+        query += " ORDER BY sent_at DESC LIMIT %s"
+        params.append(limit)
+
+        # Execute query
+        import psycopg2
+        conn = psycopg2.connect(
+            host=os.getenv("DB_HOST", "postgres"),
+            port=int(os.getenv("DB_PORT", "5432")),
+            dbname=os.getenv("DB_NAME", "wingman"),
+            user=os.getenv("DB_USER", "wingman"),
+            password=os.getenv("DB_PASSWORD", "")
+        )
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        alerts = []
+        for row in rows:
+            alerts.append({
+                "alert_id": str(row[0]),
+                "event_type": row[1],
+                "worker_id": row[2],
+                "severity": row[3],
+                "message": row[4],
+                "sent_at": row[5].isoformat() if row[5] else None,
+                "acknowledged_at": row[6].isoformat() if row[6] else None,
+                "acknowledged_by": row[7],
+                "environment": row[8]
+            })
+
+        return jsonify({
+            "alerts": alerts,
+            "count": len(alerts),
+            "filters": {
+                "severity": severity or "all",
+                "since": since or "all_time",
+                "worker_id": worker_id or "all",
+                "unacknowledged": unacknowledged
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/watcher/release/<worker_id>", methods=["POST"])
+def watcher_release(worker_id: str):
+    """
+    Release a quarantined worker (Phase 4 Watcher Enhancement).
+
+    Body:
+      {
+        "released_by": "mark@example.com",  # optional
+        "reason": "False positive investigation complete"  # optional
+      }
+    """
+    auth = _require_approval_decide()  # Require DECIDE key
+    if auth is not None:
+        return auth
+
+    try:
+        data = request.get_json() or {}
+        released_by = (data.get("released_by") or "").strip() or None
+        reason = (data.get("reason") or "").strip() or None
+
+        # Import release function from watcher
+        # (For production, this should be refactored into a shared module)
+        import redis
+        r = redis.Redis(
+            host=os.getenv("REDIS_HOST", "redis"),
+            port=int(os.getenv("REDIS_PORT", "6379")),
+            db=0,
+            decode_responses=True
+        )
+
+        # Check if worker is quarantined
+        if not r.sismember("quarantined_workers", worker_id):
+            return jsonify({"success": False, "message": "Worker not quarantined"}), 404
+
+        # Remove from quarantine set
+        r.srem("quarantined_workers", worker_id)
+
+        # Delete quarantine metadata
+        r.delete(f"quarantine:{worker_id}")
+
+        # Log release event to database
+        import psycopg2
+        conn = psycopg2.connect(
+            host=os.getenv("DB_HOST", "postgres"),
+            port=int(os.getenv("DB_PORT", "5432")),
+            dbname=os.getenv("DB_NAME", "wingman"),
+            user=os.getenv("DB_USER", "wingman"),
+            password=os.getenv("DB_PASSWORD", "")
+        )
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO watcher_alerts
+            (event_type, worker_id, severity, message, environment, metadata)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING alert_id, sent_at
+        """, (
+            "WORKER_RELEASED",
+            worker_id,
+            "LOW",
+            f"Released by {released_by or 'unknown'}: {reason or 'No reason provided'}",
+            os.getenv("DEPLOYMENT_ENV", "test"),
+            json.dumps({"released_by": released_by, "reason": reason})
+        ))
+        result = cursor.fetchone()
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "message": f"Worker {worker_id} released from quarantine",
+            "released_at": result[1].isoformat() if result else datetime.now().isoformat(),
+            "alert_id": str(result[0]) if result else None
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/', methods=['GET'])
 def index():
     """
@@ -701,8 +964,8 @@ def index():
     """
     return jsonify({
         "name": "Wingman Verification API",
-        "version": "3.0.0",
-        "phase": "3",
+        "version": "4.0.0",
+        "phase": "4_enhanced",
         "endpoints": {
             "POST /check": "Validate instruction (Phase 2)",
             "POST /log_claim": "Record worker claim (Phase 3)",
@@ -712,6 +975,9 @@ def index():
             "GET /approvals/<id>": "Get approval request (Phase 4)",
             "POST /approvals/<id>/approve": "Approve (Phase 4)",
             "POST /approvals/<id>/reject": "Reject (Phase 4)",
+            "POST /watcher/acknowledge/<alert_id>": "Acknowledge watcher alert (Phase 4 Enhanced)",
+            "GET /watcher/alerts": "Get alert history (Phase 4 Enhanced)",
+            "POST /watcher/release/<worker_id>": "Release quarantined worker (Phase 4 Enhanced)",
             "GET /health": "Check API status",
             "GET /stats": "Get verification statistics"
         },

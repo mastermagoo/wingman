@@ -1,7 +1,7 @@
 # Wingman Validation System - Operational Guide
 
 **Status**: CURRENT
-**Version**: 1.0
+**Version**: 2.0 (Phase 4 Enhanced)
 **Last Updated**: 2026-02-14
 **Scope**: DEV / TEST / PRD
 
@@ -9,7 +9,7 @@
 
 ## Purpose
 
-This guide explains how Wingman's validation system works, how to interpret validation results, and how to tune the system for optimal performance.
+This guide explains how Wingman's validation system works, including the Phase 4 enhanced watcher service with deduplication, persistence, severity classification, and automated quarantine.
 
 ---
 
@@ -459,12 +459,365 @@ if validation_result:
 
 ---
 
+## Phase 4 Enhanced: Watcher Service
+
+**Version**: 2.0
+**Status**: Deployed to PRD
+**Features**: Deduplication, Persistence, Severity Classification, Automated Quarantine
+
+### Overview
+
+The Wingman Watcher service monitors the claims audit log and provides autonomous security monitoring with:
+
+1. **Redis-based deduplication** - Prevents alert spam from duplicate events
+2. **Postgres persistence** - Full audit trail with acknowledgment workflow
+3. **Severity classification** - CRITICAL/HIGH/MEDIUM/LOW based on environment and operation type
+4. **Automated quarantine** - Blocks compromised workers from approval flow (defensive only)
+
+### Architecture
+
+```
+┌─────────────────┐
+│ Claims Audit    │
+│ Log (JSONL)     │
+└────────┬────────┘
+         │
+         v
+┌─────────────────────────────────────────────┐
+│ Wingman Watcher (wingman_watcher.py)       │
+│                                             │
+│ 1. Read new events                          │
+│ 2. Classify severity (env + operation)     │
+│ 3. Check deduplication (Redis)              │
+│ 4. Persist to database (Postgres)           │
+│ 5. Send alert (Telegram if not deduped)    │
+│ 6. Quarantine worker (if CRITICAL)          │
+│ 7. Hourly digest (suppressed alerts)        │
+└──┬──────────────┬──────────────┬────────────┘
+   │              │              │
+   v              v              v
+┌─────────┐  ┌──────────┐  ┌─────────────┐
+│ Redis   │  │ Postgres │  │ Telegram    │
+│ Dedup + │  │ Alerts   │  │ Alerts      │
+│ Quarant.│  │ Table    │  │             │
+└─────────┘  └──────────┘  └─────────────┘
+```
+
+### Severity Classification
+
+| Severity | Condition | Example | Action |
+|----------|-----------|---------|--------|
+| **CRITICAL** | FALSE claim in PRD + destructive op | `docker stop`, `DROP TABLE`, `rm -rf` | Alert + Quarantine |
+| **HIGH** | FALSE claim in PRD + safe op | Read-only command in PRD | Alert only |
+| **MEDIUM** | FALSE claim in TEST | Any FALSE claim in TEST env | Alert only |
+| **LOW** | Informational | UNVERIFIABLE claims | Persist only (no alert) |
+
+**Telegram Formatting**:
+- 🚨 CRITICAL (push notification enabled)
+- ⚠️ HIGH (push notification enabled)
+- ℹ️ MEDIUM (push notification enabled)
+- 📝 LOW (silent notification)
+
+### Deduplication
+
+**How it works**:
+1. Generate fingerprint: `SHA256(event_type + worker_id + timestamp_window)`
+2. Check Redis: `GET watcher:dedup:{fingerprint}`
+3. If exists → increment counter, skip alert
+4. If not exists → send alert, store in Redis with 1-hour TTL
+
+**Hourly Digest**:
+- Runs every hour (configurable via `WINGMAN_WATCHER_DIGEST_INTERVAL_SEC`)
+- Sends single message summarizing suppressed alerts
+- Example:
+  ```
+  📊 Watcher Digest (last hour)
+
+  Suppressed duplicates:
+  - CRITICAL: Worker worker_123 (5 occurrences)
+  - HIGH: Worker worker_456 (3 occurrences)
+
+  Total alerts suppressed: 8
+  ```
+
+**Configuration**:
+```bash
+# .env.test / .env.prd
+WINGMAN_WATCHER_DEDUP_TTL_SEC=3600  # 1 hour
+WINGMAN_WATCHER_DIGEST_INTERVAL_SEC=3600  # 1 hour
+```
+
+### Persistence
+
+**Database Table**: `watcher_alerts`
+```sql
+CREATE TABLE watcher_alerts (
+    alert_id UUID PRIMARY KEY,
+    event_type TEXT NOT NULL,
+    worker_id TEXT,
+    severity TEXT CHECK (severity IN ('CRITICAL', 'HIGH', 'MEDIUM', 'LOW')),
+    message TEXT,
+    fingerprint TEXT,
+    sent_at TIMESTAMP DEFAULT NOW(),
+    acknowledged_at TIMESTAMP,
+    acknowledged_by TEXT,
+    environment TEXT NOT NULL,
+    metadata JSONB
+);
+```
+
+**API Endpoints**:
+
+#### Get Alert History
+```bash
+# Get all CRITICAL alerts in PRD
+curl "http://127.0.0.1:8101/watcher/alerts?severity=CRITICAL&environment=prd&limit=50" \
+  -H "X-Wingman-Approval-Read-Key: YOUR_READ_KEY"
+
+# Get unacknowledged alerts
+curl "http://127.0.0.1:8101/watcher/alerts?unacknowledged=true" \
+  -H "X-Wingman-Approval-Read-Key: YOUR_READ_KEY"
+```
+
+#### Acknowledge Alert
+```bash
+curl -X POST "http://127.0.0.1:8101/watcher/acknowledge/{alert_id}" \
+  -H "X-Wingman-Approval-Decide-Key: YOUR_DECIDE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"acknowledged_by": "mark@example.com"}'
+```
+
+**Retention**: 30 days (to be implemented via cron job)
+```sql
+-- Run daily
+DELETE FROM watcher_alerts WHERE sent_at < NOW() - INTERVAL '30 days';
+```
+
+### Automated Quarantine
+
+**Principle**: Defensive only - block future approvals, NO auto-rollback.
+
+**Trigger**: CRITICAL severity event (FALSE claim in PRD + destructive operation)
+
+**Action**:
+1. Add worker_id to Redis set: `quarantined_workers`
+2. Store metadata in Redis hash: `quarantine:{worker_id}`
+3. Log quarantine event to database
+4. Send Telegram alert: "🔒 Worker {worker_id} quarantined"
+
+**Enforcement**: In `api_server.py` `/approvals/request` endpoint:
+```python
+# Check quarantine FIRST (before risk assessment)
+if is_quarantined(worker_id):
+    return 403 AUTO_REJECTED with message:
+    "Worker quarantined: {reason}. Contact Mark to release."
+```
+
+**Release Mechanism** (manual only):
+
+Via API:
+```bash
+curl -X POST "http://127.0.0.1:8101/watcher/release/worker_123" \
+  -H "X-Wingman-Approval-Decide-Key: YOUR_DECIDE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "released_by": "mark@example.com",
+    "reason": "False positive investigation complete"
+  }'
+```
+
+Via Telegram (to be implemented):
+```
+/release_worker worker_123
+```
+
+**Audit Trail**: All quarantine/release events logged to:
+- Redis (metadata)
+- Postgres (`watcher_alerts` table)
+- Claims audit log (`data/claims_audit.jsonl`)
+
+### Configuration Reference
+
+```bash
+# Environment
+DEPLOYMENT_ENV=test  # or "prd"
+
+# Database (Postgres)
+DB_HOST=postgres
+DB_PORT=5432
+DB_NAME=wingman
+DB_USER=wingman
+DB_PASSWORD=<from_secrets>
+
+# Redis
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_DB=0
+
+# Deduplication
+WINGMAN_WATCHER_DEDUP_TTL_SEC=3600  # 1 hour
+WINGMAN_WATCHER_DIGEST_INTERVAL_SEC=3600  # 1 hour
+
+# Quarantine
+WINGMAN_QUARANTINE_ENABLED=1  # 1=enabled, 0=disabled
+
+# Persistence
+WINGMAN_WATCHER_PERSISTENCE_ENABLED=1  # 1=enabled, 0=disabled
+
+# Notifications
+TELEGRAM_BOT_TOKEN=<from_secrets>
+TELEGRAM_CHAT_ID=<from_secrets>
+WINGMAN_NOTIFY_BACKENDS=stdout,telegram  # comma-separated
+```
+
+### Operational Procedures
+
+#### 1. Check Quarantined Workers
+```bash
+# Via Redis CLI
+docker compose -f docker-compose.yml -p wingman-test exec redis redis-cli
+> SMEMBERS quarantined_workers
+> HGETALL quarantine:worker_123
+```
+
+#### 2. Review Alert History
+```bash
+# Get all CRITICAL alerts in last 24 hours
+curl "http://127.0.0.1:8101/watcher/alerts?severity=CRITICAL&since=$(date -u -v-24H +%Y-%m-%dT%H:%M:%S)&limit=100" \
+  -H "X-Wingman-Approval-Read-Key: YOUR_KEY"
+```
+
+#### 3. Investigate False Positives
+```bash
+# Check worker history
+curl "http://127.0.0.1:8101/watcher/alerts?worker_id=worker_123&limit=50" \
+  -H "X-Wingman-Approval-Read-Key: YOUR_KEY"
+
+# If false positive: release worker
+curl -X POST "http://127.0.0.1:8101/watcher/release/worker_123" \
+  -H "X-Wingman-Approval-Decide-Key: YOUR_KEY" \
+  -d '{"released_by": "mark", "reason": "False positive - safe claim"}'
+```
+
+#### 4. Emergency: Clear All Quarantines
+```bash
+# WARNING: Only use in emergency (e.g., watcher bug causing mass quarantine)
+docker compose -f docker-compose.yml -p wingman-test exec redis redis-cli DEL quarantined_workers
+docker compose -f docker-compose.yml -p wingman-test exec redis redis-cli KEYS "quarantine:*" | xargs docker compose -f docker-compose.yml -p wingman-test exec redis redis-cli DEL
+```
+
+#### 5. Disable Quarantine (Emergency)
+```bash
+# Edit .env.test or .env.prd
+WINGMAN_QUARANTINE_ENABLED=0
+
+# Restart watcher
+docker compose -f docker-compose.yml -p wingman-test restart wingman-watcher
+```
+
+### Monitoring
+
+**Health Checks**:
+```bash
+# Check watcher is running
+docker compose -f docker-compose.yml -p wingman-test ps wingman-watcher
+
+# Check logs
+docker compose -f docker-compose.yml -p wingman-test logs -f wingman-watcher
+
+# Look for:
+# ✅ Redis connected: redis:6379
+# ✅ Postgres connected: postgres:5432/wingman
+# 👀 WINGMAN WATCHER: Monitoring data/claims_audit.jsonl
+# 🔧 Environment: TEST
+# 🔧 Deduplication: Enabled (TTL: 3600s)
+# 🔧 Persistence: Enabled
+# 🔧 Quarantine: Enabled
+```
+
+**Metrics** (via database):
+```sql
+-- Alert volume by severity (last 7 days)
+SELECT severity, COUNT(*), environment
+FROM watcher_alerts
+WHERE sent_at > NOW() - INTERVAL '7 days'
+GROUP BY severity, environment
+ORDER BY severity;
+
+-- Quarantine events
+SELECT COUNT(*), environment
+FROM watcher_alerts
+WHERE event_type = 'WORKER_QUARANTINED'
+  AND sent_at > NOW() - INTERVAL '30 days'
+GROUP BY environment;
+
+-- Acknowledgment rate
+SELECT
+  COUNT(*) FILTER (WHERE acknowledged_at IS NOT NULL) * 100.0 / COUNT(*) as ack_rate
+FROM watcher_alerts
+WHERE sent_at > NOW() - INTERVAL '7 days';
+```
+
+### Troubleshooting
+
+**Problem**: Watcher not sending alerts
+
+**Solution**:
+1. Check Telegram credentials:
+   ```bash
+   docker compose -f docker-compose.yml -p wingman-test exec wingman-watcher env | grep TELEGRAM
+   ```
+2. Test Telegram connectivity:
+   ```bash
+   docker compose -f docker-compose.yml -p wingman-test exec wingman-watcher \
+     python -c "import os,requests; t=os.environ.get('TELEGRAM_BOT_TOKEN'); r=requests.get(f'https://api.telegram.org/bot{t}/getMe'); print(r.json())"
+   ```
+3. Check Redis connectivity:
+   ```bash
+   docker compose -f docker-compose.yml -p wingman-test exec wingman-watcher \
+     python -c "import redis; r=redis.Redis(host='redis', port=6379); print(r.ping())"
+   ```
+
+**Problem**: Too many duplicate alerts
+
+**Solution**:
+1. Increase dedup TTL:
+   ```bash
+   # .env.test
+   WINGMAN_WATCHER_DEDUP_TTL_SEC=7200  # 2 hours instead of 1
+   ```
+2. Restart watcher:
+   ```bash
+   docker compose -f docker-compose.yml -p wingman-test restart wingman-watcher
+   ```
+
+**Problem**: Worker incorrectly quarantined
+
+**Solution**:
+1. Release worker via API (see procedure #3 above)
+2. Investigate root cause:
+   - Check event that triggered quarantine in `watcher_alerts` table
+   - Review severity classification logic in `wingman_watcher.py`
+   - If pattern is common false positive, adjust severity classification
+
+**Problem**: Database table full (>30 days of alerts)
+
+**Solution**:
+1. Manual cleanup:
+   ```sql
+   DELETE FROM watcher_alerts WHERE sent_at < NOW() - INTERVAL '30 days';
+   ```
+2. Set up daily cron job (future enhancement)
+
+---
+
 ## Related Documentation
 
 - **Architecture**: `../02-architecture/AAA_WINGMAN_ARCHITECTURE_CURRENT_BUILD.md`
 - **Deployment Plan**: `../deployment/AAA_DELTA_REPORT_VALIDATION_DEPLOYMENT.md`
+- **Watcher Design**: `WATCHER_ENHANCEMENT_DESIGN.md`
+- **Operations Runbook**: `AAA_WINGMAN_OPERATIONS_DEPLOYMENT_RUNBOOK.md`
 - **User Guide**: `../04-user-guides/APPROVAL_WORKFLOW_WITH_VALIDATION.md` (to be created)
-- **Schematic**: `../02-architecture/VALIDATION_ARCHITECTURE_SCHEMATIC.md` (to be created)
 
 ---
 

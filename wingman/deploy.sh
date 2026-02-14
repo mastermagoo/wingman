@@ -5,6 +5,24 @@
 
 set -e
 
+################################################################################
+# MANDATORY: Docker Wrapper Enforcement (Phase 5)
+################################################################################
+SCRIPT_DIR_WRAPPER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WRAPPER_DIR="${SCRIPT_DIR_WRAPPER}/tools"
+export PATH="${WRAPPER_DIR}:${PATH}"
+
+# Set DOCKER_BIN for wrapper fallback
+if [[ -z "${DOCKER_BIN:-}" ]]; then
+    for candidate in /usr/local/bin/docker /opt/homebrew/bin/docker "${HOME}/.orbstack/bin/docker" /usr/bin/docker; do
+        if [[ -x "$candidate" ]]; then
+            export DOCKER_BIN="$candidate"
+            break
+        fi
+    done
+fi
+################################################################################
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -12,7 +30,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Configuration
-COMPOSE_FILE="docker-compose.yml"
+COMPOSE_FILE="docker compose.yml"
 ENV_FILE=".env"
 ENV_EXAMPLE=".env.example"
 
@@ -38,9 +56,9 @@ check_requirements() {
         exit 1
     fi
 
-    # Check Docker Compose
-    if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-        print_error "Docker Compose is not installed"
+    # Check Docker Compose (v2)
+    if ! docker compose version &> /dev/null; then
+        print_error "Docker Compose v2 is not installed (use 'docker compose' not 'docker compose')"
         exit 1
     fi
 
@@ -69,19 +87,19 @@ setup_environment() {
 
 build_images() {
     print_status "Building Docker images..."
-    docker-compose build --no-cache
+    docker compose build --no-cache
     print_status "Images built successfully"
 }
 
 start_services() {
     print_status "Starting services..."
-    docker-compose up -d
+    docker compose up -d
     print_status "Services started"
 }
 
 stop_services() {
     print_status "Stopping services..."
-    docker-compose down
+    docker compose down
     print_status "Services stopped"
 }
 
@@ -93,9 +111,9 @@ restart_services() {
 show_logs() {
     service=$1
     if [ -z "$service" ]; then
-        docker-compose logs -f
+        docker compose logs -f
     else
-        docker-compose logs -f "$service"
+        docker compose logs -f "$service"
     fi
 }
 
@@ -174,7 +192,7 @@ case "${1:-}" in
         read -p "Are you sure? (y/N) " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            docker-compose down -v
+            docker compose down -v
             print_status "Cleanup complete"
         fi
         ;;

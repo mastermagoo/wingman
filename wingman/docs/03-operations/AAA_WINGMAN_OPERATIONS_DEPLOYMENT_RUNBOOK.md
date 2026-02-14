@@ -1,17 +1,89 @@
 # Wingman Operations Guide
 
-**Status**: CURRENT  
-**Last Updated**: 2026-01-17  
-**Version**: 1.0  
-**Scope**: Wingman operations/runbooks (DEV/TEST/PRD)  
+**Status**: CURRENT
+**Last Updated**: 2026-02-14
+**Version**: 1.1
+**Scope**: Wingman operations/runbooks (DEV/TEST/PRD)
 
 > **Audience**: System operators, DevOps, and anyone running Wingman day-to-day
+
+---
+
+## Prerequisites: Docker Wrapper Setup (MANDATORY)
+
+**REQUIRED**: All docker/compose commands in this runbook assume the Docker wrapper is in effect.
+
+The Docker wrapper (`tools/docker-wrapper.sh`) blocks destructive Docker commands unless they are executed via the Wingman Execution Gateway with proper approval. This is a **mandatory** infrastructure-level protection.
+
+### One-Time Setup (per shell session):
+
+```bash
+# Add wrapper to PATH so 'docker' resolves to wrapper first
+export PATH="/Volumes/Data/ai_projects/wingman-system/wingman/tools:$PATH"
+
+# Verify wrapper is active
+which docker
+# Expected output: /Volumes/Data/ai_projects/wingman-system/wingman/tools/docker
+
+# If real docker not in wrapper's search path, set DOCKER_BIN
+export DOCKER_BIN="/Users/kermit/.orbstack/bin/docker"
+```
+
+### Permanent Setup (recommended for daily use):
+
+Add to your shell profile (`~/.zshrc` or `~/.bashrc`):
+
+```bash
+# Wingman Docker Wrapper (mandatory for all Wingman operations)
+export PATH="/Volumes/Data/ai_projects/wingman-system/wingman/tools:$PATH"
+export DOCKER_BIN="/Users/kermit/.orbstack/bin/docker"
+```
+
+Then reload your shell:
+```bash
+source ~/.zshrc  # or source ~/.bashrc
+```
+
+### Verify Wrapper is Active:
+
+```bash
+# Test 1: Check which docker binary is being used
+which docker
+# Expected: /Volumes/Data/ai_projects/wingman-system/wingman/tools/docker
+
+# Test 2: Try a safe command (should work)
+docker ps
+
+# Test 3: Try a destructive command (should be blocked)
+docker stop test-container
+# Expected: ❌ BLOCKED: Destructive docker command requires Wingman approval
+```
+
+### CRITICAL: Bypass Prevention
+
+**DO NOT** bypass the wrapper using absolute paths:
+```bash
+# ❌ PROHIBITED - bypasses wrapper
+/usr/bin/docker stop container
+
+# ✅ CORRECT - uses wrapper
+docker stop container  # (will be blocked and require approval)
+```
+
+All destructive Docker operations must:
+1. Go through the wrapper (blocked at shell level)
+2. Be submitted as approval request to Wingman API
+3. Be approved via Telegram
+4. Be executed via Execution Gateway with capability token
+
+See: [Docker Wrapper Audit Report](DOCKER_WRAPPER_AUDIT.md) for implementation details.
 
 ---
 
 ## Wingman 5 (Phase 5) — Deployment Plan
 
 - **Secure deployment plan (Phase 5)**: [PHASE_5_SECURE_DEPLOYMENT.md](../99-archive/paul-wingman/PHASE_5_SECURE_DEPLOYMENT.md)
+- **Docker wrapper enforcement audit**: [DOCKER_WRAPPER_AUDIT.md](DOCKER_WRAPPER_AUDIT.md)
 
 ---
 
@@ -513,9 +585,318 @@ alias wm-test='docker compose -f /Volumes/Data/ai_projects/wingman-system/wingma
 
 ---
 
+## Phase 4 Enhanced: Watcher Service Operations
+
+**Version**: 2.0
+**Features**: Deduplication, Persistence, Severity Classification, Automated Quarantine
+
+### Watcher Service Overview
+
+The Wingman Watcher service (`wingman_watcher.py`) provides autonomous security monitoring with:
+
+- **Real-time monitoring**: Watches `data/claims_audit.jsonl` for FALSE claims
+- **Deduplication**: Redis-based fingerprinting prevents alert spam
+- **Persistence**: All alerts stored in Postgres with 30-day retention
+- **Severity classification**: CRITICAL/HIGH/MEDIUM/LOW based on environment and operation
+- **Automated quarantine**: Blocks compromised workers from approval flow
+- **Telegram alerts**: Real-time notifications with severity indicators
+
+### Daily Operations
+
+#### 1. Check Watcher Status
+
+```bash
+# TEST environment
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test ps wingman-watcher
+
+# PRD environment
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.prd.yml \
+  -p wingman-prd --env-file /Volumes/Data/ai_projects/wingman-system/wingman/.env.prd \
+  ps wingman-watcher
+```
+
+#### 2. Monitor Watcher Logs
+
+```bash
+# TEST
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test logs -f wingman-watcher
+
+# Look for healthy startup messages:
+# ✅ Redis connected: redis:6379
+# ✅ Postgres connected: postgres:5432/wingman
+# 👀 WINGMAN WATCHER: Monitoring data/claims_audit.jsonl
+# 🔧 Environment: TEST
+# 🔧 Deduplication: Enabled (TTL: 3600s)
+# 🔧 Persistence: Enabled
+# 🔧 Quarantine: Enabled
+```
+
+#### 3. View Recent Alerts
+
+```bash
+# Via API (requires READ key from .env.test)
+curl "http://127.0.0.1:8101/watcher/alerts?limit=20" \
+  -H "X-Wingman-Approval-Read-Key: YOUR_READ_KEY"
+
+# Filter by severity
+curl "http://127.0.0.1:8101/watcher/alerts?severity=CRITICAL&limit=50" \
+  -H "X-Wingman-Approval-Read-Key: YOUR_READ_KEY"
+
+# Filter by worker
+curl "http://127.0.0.1:8101/watcher/alerts?worker_id=worker_123" \
+  -H "X-Wingman-Approval-Read-Key: YOUR_READ_KEY"
+```
+
+#### 4. Check Quarantined Workers
+
+```bash
+# Via Redis CLI
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test exec redis redis-cli SMEMBERS quarantined_workers
+
+# Get quarantine details for a specific worker
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test exec redis redis-cli HGETALL quarantine:worker_123
+```
+
+### Incident Response
+
+#### Scenario 1: Worker Incorrectly Quarantined
+
+**Symptoms**:
+- Worker approval requests auto-rejected with "Worker quarantined" message
+- Telegram alert shows FALSE claim that was actually safe
+
+**Resolution**:
+```bash
+# 1. Investigate the event that triggered quarantine
+curl "http://127.0.0.1:8101/watcher/alerts?worker_id=worker_123&severity=CRITICAL" \
+  -H "X-Wingman-Approval-Read-Key: YOUR_READ_KEY"
+
+# 2. Verify it's a false positive (check claim details)
+# 3. Release worker via API
+curl -X POST "http://127.0.0.1:8101/watcher/release/worker_123" \
+  -H "X-Wingman-Approval-Decide-Key: YOUR_DECIDE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "released_by": "mark@example.com",
+    "reason": "False positive - claim was safe"
+  }'
+
+# 4. Verify worker can now request approvals
+# Worker's next approval request should succeed (not auto-rejected)
+```
+
+#### Scenario 2: Alert Storm (Too Many Duplicate Alerts)
+
+**Symptoms**:
+- Multiple identical Telegram alerts in short time
+- Deduplication not working
+
+**Resolution**:
+```bash
+# 1. Check Redis connectivity
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test exec wingman-watcher \
+  python -c "import redis; r=redis.Redis(host='redis', port=6379); print(r.ping())"
+
+# 2. Check dedup TTL setting
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test exec wingman-watcher env | grep DEDUP_TTL
+
+# 3. Increase TTL if needed (edit .env.test)
+# WINGMAN_WATCHER_DEDUP_TTL_SEC=7200  # 2 hours instead of 1
+
+# 4. Restart watcher
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test restart wingman-watcher
+```
+
+#### Scenario 3: No Alerts Received
+
+**Symptoms**:
+- Watcher running but no Telegram alerts
+- Events appearing in `data/claims_audit.jsonl`
+
+**Resolution**:
+```bash
+# 1. Check Telegram configuration
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test exec wingman-watcher env | grep TELEGRAM
+
+# 2. Test Telegram connectivity
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test exec wingman-watcher \
+  python -c "import os,requests; t=os.environ.get('TELEGRAM_BOT_TOKEN'); r=requests.get(f'https://api.telegram.org/bot{t}/getMe'); print(r.json())"
+
+# 3. Check watcher logs for errors
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test logs wingman-watcher | grep -i "failed\|error"
+
+# 4. Check database persistence (alerts should be in DB even if Telegram fails)
+curl "http://127.0.0.1:8101/watcher/alerts?limit=10" \
+  -H "X-Wingman-Approval-Read-Key: YOUR_READ_KEY"
+```
+
+#### Scenario 4: Database Full (>30 Days of Alerts)
+
+**Symptoms**:
+- Database growing too large
+- Alert queries slow
+
+**Resolution**:
+```bash
+# 1. Check alert volume
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test exec postgres psql -U wingman -d wingman \
+  -c "SELECT COUNT(*), MIN(sent_at), MAX(sent_at) FROM watcher_alerts;"
+
+# 2. Manual cleanup (delete alerts older than 30 days)
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test exec postgres psql -U wingman -d wingman \
+  -c "DELETE FROM watcher_alerts WHERE sent_at < NOW() - INTERVAL '30 days';"
+
+# 3. Set up daily cleanup cron (future enhancement)
+# Add to crontab: 0 2 * * * docker compose ... exec postgres psql -U wingman -d wingman -c "DELETE FROM watcher_alerts WHERE sent_at < NOW() - INTERVAL '30 days';"
+```
+
+### Emergency Procedures
+
+#### Emergency: Disable Quarantine
+
+**When**: Watcher bug causing mass quarantine of legitimate workers
+
+```bash
+# 1. Disable quarantine feature
+# Edit .env.test or .env.prd:
+# WINGMAN_QUARANTINE_ENABLED=0
+
+# 2. Restart watcher
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test restart wingman-watcher
+
+# 3. Clear all quarantines
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test exec redis redis-cli DEL quarantined_workers
+
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test exec redis redis-cli --scan --pattern "quarantine:*" | \
+  xargs docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test exec redis redis-cli DEL
+
+# 4. Re-enable after fix deployed
+# WINGMAN_QUARANTINE_ENABLED=1
+# Restart watcher
+```
+
+#### Emergency: Disable Watcher Completely
+
+**When**: Watcher causing service disruption
+
+```bash
+# Stop watcher (preserves state)
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test stop wingman-watcher
+
+# Verify other services still running
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test ps
+
+# Re-enable after fix
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test start wingman-watcher
+```
+
+### Database Queries
+
+#### Alert Volume by Severity (Last 7 Days)
+```bash
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test exec postgres psql -U wingman -d wingman -c "
+SELECT severity, COUNT(*), environment
+FROM watcher_alerts
+WHERE sent_at > NOW() - INTERVAL '7 days'
+GROUP BY severity, environment
+ORDER BY CASE severity
+  WHEN 'CRITICAL' THEN 1
+  WHEN 'HIGH' THEN 2
+  WHEN 'MEDIUM' THEN 3
+  WHEN 'LOW' THEN 4
+END;
+"
+```
+
+#### Quarantine Events
+```bash
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test exec postgres psql -U wingman -d wingman -c "
+SELECT worker_id, message, sent_at, environment
+FROM watcher_alerts
+WHERE event_type = 'WORKER_QUARANTINED'
+  AND sent_at > NOW() - INTERVAL '30 days'
+ORDER BY sent_at DESC;
+"
+```
+
+#### Acknowledgment Rate
+```bash
+docker compose -f /Volumes/Data/ai_projects/wingman-system/wingman/docker-compose.yml \
+  -p wingman-test exec postgres psql -U wingman -d wingman -c "
+SELECT
+  COUNT(*) FILTER (WHERE acknowledged_at IS NOT NULL) * 100.0 / COUNT(*) as ack_rate_pct,
+  COUNT(*) FILTER (WHERE acknowledged_at IS NOT NULL) as acknowledged,
+  COUNT(*) FILTER (WHERE acknowledged_at IS NULL) as unacknowledged,
+  COUNT(*) as total
+FROM watcher_alerts
+WHERE sent_at > NOW() - INTERVAL '7 days';
+"
+```
+
+### Configuration Reference
+
+**Environment Variables** (`.env.test` / `.env.prd`):
+
+```bash
+# Environment
+DEPLOYMENT_ENV=test  # or "prd"
+
+# Database (Postgres)
+DB_HOST=postgres
+DB_PORT=5432
+DB_NAME=wingman
+DB_USER=wingman
+DB_PASSWORD=<secret>
+
+# Redis
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_DB=0
+
+# Deduplication
+WINGMAN_WATCHER_DEDUP_TTL_SEC=3600  # 1 hour
+WINGMAN_WATCHER_DIGEST_INTERVAL_SEC=3600  # 1 hour
+
+# Quarantine
+WINGMAN_QUARANTINE_ENABLED=1  # 1=enabled, 0=disabled
+
+# Persistence
+WINGMAN_WATCHER_PERSISTENCE_ENABLED=1  # 1=enabled, 0=disabled
+
+# Notifications
+TELEGRAM_BOT_TOKEN=<secret>
+TELEGRAM_CHAT_ID=<secret>
+WINGMAN_NOTIFY_BACKENDS=stdout,telegram
+```
+
+---
+
 ## See Also
 
 - [Architecture](../02-architecture/README.md) — System design
 - [How to Use](../01-how-to-use/README.md) — Integration guide
+- [Watcher Design](WATCHER_ENHANCEMENT_DESIGN.md) — Phase 4 design document
+- [Validation Guide](VALIDATION_OPERATIONAL_GUIDE.md) — Validation system operations
 - [DEPLOYMENT_PLAN.md](../../DEPLOYMENT_PLAN.md) — Detailed deployment status
 - [CLAUDE.md](../../CLAUDE.md) — AI agent instructions
