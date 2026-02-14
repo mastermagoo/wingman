@@ -40,6 +40,9 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - DEPLOYMENT_ENV=prd
       - WINGMAN_APPROVAL_DB=${WINGMAN_APPROVAL_DB:-data/approvals.db}
+      # Validation feature flags (Phase 2)
+      - VALIDATION_ENABLED=${VALIDATION_ENABLED:-1}
+      - VALIDATION_ROLLOUT_PERCENT=${VALIDATION_ROLLOUT_PERCENT:-100}
       # Phase 4 (HITL) auth: prefer role-separated keys; legacy key still supported.
       - WINGMAN_APPROVAL_READ_KEYS=${WINGMAN_APPROVAL_READ_KEYS:-}
       - WINGMAN_APPROVAL_DECIDE_KEYS=${WINGMAN_APPROVAL_DECIDE_KEYS:-}

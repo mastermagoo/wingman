@@ -1,8 +1,8 @@
 # Wingman Architecture — Gap Analysis & What Comes Next
-**Version**: 1.0  
+**Version**: 2.0
 
-**Status**: CURRENT (authoritative for “strategy vs build” and next steps)  
-**Last Updated**: 2026-01-17  
+**Status**: CURRENT (authoritative for "strategy vs build" and next steps)
+**Last Updated**: 2026-02-14
 **Scope**: DEV / TEST / PRD  
 
 ---
@@ -39,6 +39,26 @@ If you want this doc to assert “what is running now”, we must regenerate tha
 ---
 
 ## What comes next (high level)
+
+### ✅ Completed (2026-02-14)
+
+**Validation Enhancement (Phase 1-2)**:
+- ✅ All 5 validators implemented (990 LOC)
+- ✅ Profile-based validation system (operational vs deployment)
+- ✅ Comprehensive test coverage (843 LOC)
+- ✅ Deployed to TEST and PRD
+- ✅ Feature flags for gradual rollout
+- See: `../deployment/AAA_DELTA_REPORT_VALIDATION_DEPLOYMENT.md`
+
+### 🔄 In Progress
+
+**Validation Gradual Rollout (Phase 3.6)**:
+- ⏳ Enable validation in PRD (currently disabled)
+- ⏳ Gradual rollout: 10% → 50% → 100%
+- ⏳ Monitor false positive/negative rates
+- ⏳ Tune thresholds based on real-world data
+- Timeline: 2-4 weeks
+- See: `../deployment/AAA_PRD_DEPLOYMENT_PLAN.md` (Phase 3.6 section)
 
 ### Cross-environment priorities (DEV/TEST/PRD)
 

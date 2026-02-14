@@ -31,6 +31,7 @@ try:
     from approval_store import default_store as approval_default_store
     from consensus_verifier import assess_risk_consensus
     from capability_token import generate_token
+    from validation_store import store_validation_result
 except ImportError as e:
     print(f"Error importing modules: {e}")
     sys.exit(1)
@@ -286,15 +287,17 @@ def check():
             }), 400
 
         instruction = data['instruction']
+        task_name = data.get('task_name', '')
         result = instruction_validator.validate(instruction)
 
         if composite_validator is not None:
-            composite_result = composite_validator.validate(instruction)
+            composite_result = composite_validator.validate(instruction, task_name=task_name)
             result["composite_score"] = composite_result["overall_score"]
             result["composite_recommendation"] = composite_result["recommendation"]
             result["composite_risk_level"] = composite_result["risk_level"]
             result["composite_reasoning"] = composite_result["reasoning"]
             result["validator_scores"] = composite_result["validator_scores"]
+            result["validation_profile"] = composite_result.get("profile")
 
         return jsonify(result), 200
     except Exception as e:
@@ -359,6 +362,54 @@ def approvals_request():
         if not instruction:
             return jsonify({"error": "Missing 'instruction' field"}), 400
 
+        # Feature flag: Check if validation is enabled
+        validation_enabled = (os.getenv("VALIDATION_ENABLED") or "1").strip() == "1"
+        validation_rollout_pct = int(os.getenv("VALIDATION_ROLLOUT_PERCENT") or "100")
+
+        # Generate request fingerprint for rollout decision
+        import hashlib
+        rollout_hash = int(hashlib.sha256(f"{worker_id}{instruction}".encode()).hexdigest(), 16) % 100
+        use_validation = validation_enabled and (rollout_hash < validation_rollout_pct)
+
+        # Run composite validation if enabled and validator available
+        validation_result = None
+        if use_validation and composite_validator is not None:
+            try:
+                validation_result = composite_validator.validate(instruction, task_name=task_name)
+            except Exception as e:
+                print(f"Warning: Validation failed: {e}")
+                validation_result = None
+
+        # Auto-reject if validation recommends it (secrets, dangerous patterns, low quality)
+        if validation_result and validation_result.get("recommendation") == "REJECT":
+            req = approval_store.create_request(
+                worker_id=worker_id,
+                task_name=task_name,
+                instruction=instruction,
+                risk_level="CRITICAL",
+                risk_reason=validation_result.get("reasoning", "Validation rejected"),
+                status="AUTO_REJECTED",
+            )
+            # Store validation result
+            if validation_result:
+                store_validation_result(req.request_id, validation_result)
+
+            return jsonify({
+                "needs_approval": False,
+                "status": "AUTO_REJECTED",
+                "request": req.to_dict(),
+                "validation": {
+                    "overall_score": validation_result.get("overall_score"),
+                    "recommendation": validation_result.get("recommendation"),
+                    "risk_level": validation_result.get("risk_level"),
+                    "reasoning": validation_result.get("reasoning"),
+                    "validator_scores": validation_result.get("validator_scores", {}),
+                    "profile": validation_result.get("profile"),
+                    "active_validators": validation_result.get("active_validators")
+                }
+            }), 403
+
+        # Run heuristic risk assessment
         use_consensus = (os.getenv("WINGMAN_CONSENSUS_ENABLED") or "").strip() == "1"
         if use_consensus:
             risk = assess_risk_consensus(instruction, task_name=task_name, deployment_env=deployment_env)
@@ -367,7 +418,19 @@ def approvals_request():
         risk_level = risk["risk_level"]
         risk_reason = risk["risk_reason"]
 
+        # Auto-approve if: LOW risk AND (no validation OR validation score >= 90)
+        auto_approve = False
         if risk_level == "LOW":
+            if validation_result:
+                # Require high validation score for auto-approve
+                if (validation_result.get("overall_score", 0) >= 90 and
+                    validation_result.get("recommendation") == "APPROVE"):
+                    auto_approve = True
+            else:
+                # No validation available, use heuristic only
+                auto_approve = True
+
+        if auto_approve:
             req = approval_store.create_request(
                 worker_id=worker_id,
                 task_name=task_name,
@@ -376,14 +439,28 @@ def approvals_request():
                 risk_reason=risk_reason,
                 status="AUTO_APPROVED",
             )
-            return jsonify(
-                {
-                    "needs_approval": False,
-                    "status": "AUTO_APPROVED",
-                    "request": req.to_dict(),
-                    "risk": risk,
+            # Store validation result
+            if validation_result:
+                store_validation_result(req.request_id, validation_result)
+
+            response_data = {
+                "needs_approval": False,
+                "status": "AUTO_APPROVED",
+                "request": req.to_dict(),
+                "risk": risk,
+            }
+            # Include validation details if available
+            if validation_result:
+                response_data["validation"] = {
+                    "overall_score": validation_result.get("overall_score"),
+                    "recommendation": validation_result.get("recommendation"),
+                    "risk_level": validation_result.get("risk_level"),
+                    "reasoning": validation_result.get("reasoning"),
+                    "validator_scores": validation_result.get("validator_scores", {}),
+                    "profile": validation_result.get("profile"),
+                    "active_validators": validation_result.get("active_validators")
                 }
-            ), 200
+            return jsonify(response_data), 200
 
         # De-dup: reuse an existing pending request for the same (worker/task/instruction/risk)
         try:
@@ -415,14 +492,28 @@ def approvals_request():
             risk_reason=risk_reason,
             status="PENDING",
         )
-        return jsonify(
-            {
-                "needs_approval": True,
-                "status": "PENDING",
-                "request": req.to_dict(),
-                "risk": risk,
+        # Store validation result
+        if validation_result:
+            store_validation_result(req.request_id, validation_result)
+
+        response_data = {
+            "needs_approval": True,
+            "status": "PENDING",
+            "request": req.to_dict(),
+            "risk": risk,
+        }
+        # Include validation details if available
+        if validation_result:
+            response_data["validation"] = {
+                "overall_score": validation_result.get("overall_score"),
+                "recommendation": validation_result.get("recommendation"),
+                "risk_level": validation_result.get("risk_level"),
+                "reasoning": validation_result.get("reasoning"),
+                "validator_scores": validation_result.get("validator_scores", {}),
+                "profile": validation_result.get("profile"),
+                "active_validators": validation_result.get("active_validators")
             }
-        ), 200
+        return jsonify(response_data), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

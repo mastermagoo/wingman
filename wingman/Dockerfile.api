@@ -17,6 +17,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY api_server.py .
 COPY approval_store.py .
+COPY validation_store.py .
 COPY capability_token.py .
 COPY enhanced_verifier.py .
 COPY simple_verifier.py .

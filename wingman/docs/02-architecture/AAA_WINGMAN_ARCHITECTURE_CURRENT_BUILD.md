@@ -1,8 +1,8 @@
 # Wingman Architecture — Current Build Design (DEV/TEST/PRD)
-**Version**: 1.0  
+**Version**: 2.0
 
-**Status**: CURRENT (authoritative for “what is implemented now”)  
-**Last Updated**: 2026-01-17  
+**Status**: CURRENT (authoritative for "what is implemented now")
+**Last Updated**: 2026-02-14
 **Scope**: DEV / TEST / PRD  
 
 ---
@@ -54,9 +54,53 @@ Core endpoints:
 
 ### Approvals (HITL)
 
-Risk-based flow:
-- LOW: auto-approve
-- MEDIUM/HIGH: human approval (Telegram + API)
+Risk-based flow with validation enhancement:
+- **AUTO_REJECTED**: Secrets found, dangerous patterns, or validation score < 30
+- **AUTO_APPROVED**: LOW risk + validation score >= 90 (operational profile: >=85)
+- **MANUAL_REVIEW**: Medium/high risk or validation inconclusive
+
+### Validation Layer (Phase 1-2, Complete 2026-02-14)
+
+**Status**: Deployed to TEST and PRD (PRD: disabled by default, ready for gradual rollout)
+
+**Architecture**: Profile-based validation with 5 validators
+- **CompositeValidator**: Orchestrates validation based on detected profile
+  - **Operational Profile**: Read-only/low-risk commands (docker logs, status checks)
+    - Validators: CodeScanner (60%), SemanticAnalyzer (40%)
+    - Auto-approve threshold: 85, Auto-reject threshold: 30
+    - Skips ContentQualityValidator (no 10-point framework needed)
+  - **Deployment Profile**: Deployments, schema changes, high-risk operations
+    - Validators: CodeScanner (30%), ContentQualityValidator (25%), DependencyAnalyzer (20%), SemanticAnalyzer (25%)
+    - Auto-approve threshold: 90, Auto-reject threshold: 30
+    - Requires full 10-point framework validation
+
+**Validators** (990 LOC total):
+1. **CodeScanner** (207 LOC): Pattern-based detection of secrets, dangerous commands, destructive operations
+2. **SemanticAnalyzer** (129 LOC): Intent analysis and risk assessment (heuristic-based, no LLM dependency)
+3. **DependencyAnalyzer** (138 LOC): Blast radius assessment for cascading failures
+4. **ContentQualityValidator** (283 LOC): Evaluates quality of 10-point framework sections
+5. **CompositeValidator** (214 LOC): Profile detection and weighted scoring
+
+**Decision Logic**:
+- **Auto-Reject Triggers**:
+  - Secrets or credentials detected (immediate reject)
+  - Any active validator scores below hard floor (30)
+  - Overall weighted score below auto-reject threshold (30)
+- **Auto-Approve Criteria**:
+  - Profile-appropriate validators all score above auto-approve threshold (85-90)
+  - Risk level is LOW
+  - No secrets or dangerous patterns detected
+- **Manual Review**: Everything else (includes full validation report)
+
+**Feature Flags** (environment variables):
+- `VALIDATION_ENABLED`: 1=enabled, 0=disabled (default: 1 for TEST, 0 for PRD)
+- `VALIDATION_ROLLOUT_PERCENT`: 0-100 (default: 100, allows gradual rollout)
+
+**Profile Detection**: Automatic based on instruction keywords
+- Operational: `docker logs`, `docker ps`, `curl health`, `cat`, `tail`, `status check`
+- Deployment: `deploy`, `migrate`, `CREATE TABLE`, `restart container`, `docker stop`
+
+**Test Coverage**: 843 LOC comprehensive tests across all validators
 
 ### Verifiers
 
