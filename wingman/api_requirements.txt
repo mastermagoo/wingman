@@ -8,5 +8,8 @@ werkzeug==2.3.7
 psycopg2-binary==2.9.9
 requests==2.31.0
 
+# Phase 4 - Watcher Enhancement (Redis for deduplication and quarantine)
+redis==5.0.1
+
 # Optional for production deployment
 gunicorn==21.2.0
