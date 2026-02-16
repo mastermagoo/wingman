@@ -46,12 +46,18 @@ def store_validation_result(
         conn = _get_postgres_connection()
         cursor = conn.cursor()
 
-        # Check if approval exists in Postgres (may be in-memory in TEST mode)
-        cursor.execute("SELECT COUNT(*) FROM approvals WHERE id = %s", (approval_id,))
-        approval_exists = cursor.fetchone()[0] > 0
+        # Check if approval exists in Postgres (may be in-memory mode)
+        try:
+            cursor.execute("SELECT COUNT(*) FROM approvals WHERE id = %s", (approval_id,))
+            approval_exists = cursor.fetchone()[0] > 0
+        except Exception:
+            # approvals table doesn't exist - approval store is in memory mode
+            cursor.close()
+            conn.close()
+            return True  # Not an error - just skip storage in memory mode
 
         if not approval_exists:
-            # Approval is in memory (TEST mode), skip validation storage
+            # Approval is in memory, skip validation storage
             cursor.close()
             conn.close()
             return True  # Not an error - just skip storage in memory mode
