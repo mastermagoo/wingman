@@ -12,6 +12,9 @@ services:
       context: .
       dockerfile: Dockerfile.api
     container_name: wingman-prd-api
+    # Load PRD secrets/config from .env.prd (local-only, never committed)
+    env_file:
+      - .env.prd
     environment:
       - FLASK_ENV=${FLASK_ENV:-production}
       # PRD uses 5001 to avoid macOS AirPlay Receiver conflict on port 5000
@@ -51,7 +54,7 @@ services:
       # Phase 5 (Execution Gateway) JWT secret for capability tokens
       - GATEWAY_JWT_SECRET=${GATEWAY_JWT_SECRET:?GATEWAY_JWT_SECRET is required}
     ports:
-      - "127.0.0.1:${API_PORT:-5001}:8001"
+      - "127.0.0.1:${API_PORT:-5001}:${API_PORT:-5001}"
     depends_on:
       postgres:
         condition: service_healthy
@@ -69,7 +72,7 @@ services:
       - "com.wingman.compose-file=docker-compose.prd.yml"
       - "com.wingman.environment=production"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: ["CMD", "sh", "-c", "curl -f http://localhost:${API_PORT:-5001}/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -86,6 +89,8 @@ services:
       dockerfile: Dockerfile.api
     container_name: wingman-prd-watcher
     command: ["python", "-u", "wingman_watcher.py"]
+    env_file:
+      - .env.prd
     environment:
       - WINGMAN_AUDIT_LOG=${WINGMAN_AUDIT_LOG:-data/claims_audit.jsonl}
       - WINGMAN_WATCHER_STATE=${WINGMAN_WATCHER_STATE:-data/watcher_state.json}
@@ -99,8 +104,8 @@ services:
       - WINGMAN_REMEDIATE_MODE=${WINGMAN_REMEDIATE_MODE:-disabled}
       - WINGMAN_REMEDIATE_CMD=${WINGMAN_REMEDIATE_CMD:-}
       - DEPLOYMENT_ENV=prd
-      # Approval monitoring configuration
-      - WINGMAN_API_URL=http://wingman-api:8001
+      # Approval monitoring configuration (uses API_PORT from .env.prd, defaults to 5001)
+      - WINGMAN_API_URL=${WINGMAN_API_URL:-http://wingman-prd-api:5001}
       - WINGMAN_APPROVAL_READ_KEY=${WINGMAN_APPROVAL_READ_KEY:-}
       - WINGMAN_APPROVAL_NOTIFY_ENABLED=${WINGMAN_APPROVAL_NOTIFY_ENABLED:-true}
       - WINGMAN_APPROVAL_CHECK_INTERVAL_SEC=${WINGMAN_APPROVAL_CHECK_INTERVAL_SEC:-30}
@@ -130,11 +135,13 @@ services:
       context: .
       dockerfile: Dockerfile.bot
     container_name: wingman-prd-telegram
+    env_file:
+      - .env.prd
     environment:
       - BOT_TOKEN=${BOT_TOKEN:?BOT_TOKEN is required}
       - CHAT_ID=${CHAT_ID:?CHAT_ID is required}
-      # Use container_name hostname to avoid Docker DNS alias quirks in PRD.
-      - API_URL=${API_URL:-http://wingman-prd-api:8001}
+      # Use container_name hostname to avoid Docker DNS alias quirks in PRD (uses API_PORT from .env.prd)
+      - API_URL=${API_URL:-http://wingman-prd-api:5001}
       # Bot should only receive minimal keys required to read and decide.
       - WINGMAN_APPROVAL_READ_KEY=${WINGMAN_APPROVAL_READ_KEY:-}
       - WINGMAN_APPROVAL_DECIDE_KEY=${WINGMAN_APPROVAL_DECIDE_KEY:-}
@@ -172,6 +179,8 @@ services:
       context: .
       dockerfile: Dockerfile.gateway
     container_name: wingman-prd-gateway
+    env_file:
+      - .env.prd
     environment:
       - GATEWAY_JWT_SECRET=${GATEWAY_JWT_SECRET:?GATEWAY_JWT_SECRET is required}
       - GATEWAY_PORT=5002
@@ -213,6 +222,8 @@ services:
   postgres:
     image: timescale/timescaledb:latest-pg15
     container_name: wingman-prd-postgres
+    env_file:
+      - .env.prd
     environment:
       - POSTGRES_USER=${DB_USER:-wingman_prd}
       - POSTGRES_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}

@@ -24,10 +24,14 @@ Or manually create `/Volumes/Data/ai_projects/intel-system/wingman_client.py` wi
 
 ## 2. Configure Intel-System Environment
 
-Add to `/Volumes/Data/ai_projects/intel-system/.env`:
+Choose TEST or PRD configuration based on your needs:
+
+### TEST Environment Configuration
+
+Add to `/Volumes/Data/ai_projects/intel-system/.env` or `.env.test`:
 
 ```bash
-# Wingman Integration (Approval Authority)
+# Wingman Integration (Approval Authority) - TEST
 WINGMAN_API_URL=http://127.0.0.1:8101
 WINGMAN_APPROVAL_REQUEST_KEY=XuDeKtTJ6bldz_7igJRTfm-nGyc2BWj5d5xyRCKptlY
 WINGMAN_APPROVAL_READ_KEY=XuDeKtTJ6bldz_7igJRTfm-nGyc2BWj5d5xyRCKptlY
@@ -36,6 +40,23 @@ WINGMAN_APPROVAL_READ_KEY=XuDeKtTJ6bldz_7igJRTfm-nGyc2BWj5d5xyRCKptlY
 SYSTEM_NAME=intel-system
 DEPLOYMENT_ENV=test
 ```
+
+### PRD Environment Configuration
+
+Add to `/Volumes/Data/ai_projects/intel-system/.env.prd`:
+
+```bash
+# Wingman Integration (Approval Authority) - PRD
+WINGMAN_API_URL=http://127.0.0.1:5001
+WINGMAN_APPROVAL_REQUEST_KEY=outgunning-web-serin-profounder-swans-globule
+WINGMAN_APPROVAL_READ_KEY=outgunning-web-serin-profounder-swans-globule
+
+# System identifier
+SYSTEM_NAME=intel-system
+DEPLOYMENT_ENV=prd
+```
+
+**CRITICAL**: Get actual PRD keys from Wingman `.env.prd`. NEVER commit `.env.prd` to git.
 
 ---
 
@@ -124,8 +145,10 @@ elif result["status"] == "PENDING":
 
 ## 4. Verify Wingman is Running
 
+### TEST Environment
+
 ```bash
-# Check Wingman health
+# Check Wingman TEST health
 curl -s http://127.0.0.1:8101/health | python3 -m json.tool
 
 # Should return:
@@ -137,9 +160,31 @@ curl -s http://127.0.0.1:8101/health | python3 -m json.tool
 ```
 
 If not running:
+
 ```bash
 cd /Volumes/Data/ai_projects/wingman-system/wingman
 docker compose -f docker-compose.yml -p wingman-test up -d
+```
+
+### PRD Environment
+
+```bash
+# Check Wingman PRD health
+curl -s http://127.0.0.1:5001/health | python3 -m json.tool
+
+# Should return:
+# {
+#   "status": "healthy",
+#   "phase": "3",
+#   ...
+# }
+```
+
+If not running:
+
+```bash
+cd /Volumes/Data/ai_projects/wingman-system/wingman
+docker compose -f docker-compose.prd.yml -p wingman-prd --env-file .env.prd up -d
 ```
 
 ---

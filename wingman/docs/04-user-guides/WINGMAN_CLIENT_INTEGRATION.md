@@ -85,22 +85,105 @@ You'll need:
 
 ---
 
+## Environment Configuration (TEST vs PRD)
+
+Wingman runs in two environments with different behavior and API endpoints.
+
+### TEST Environment
+
+**Purpose**: Development and testing
+**API URL**: `http://127.0.0.1:8101`
+**Behavior**: Most operations auto-approved for faster iteration
+**API Keys**: From `/Volumes/Data/ai_projects/wingman-system/wingman/.env.test`
+
+**Start TEST stack**:
+```bash
+cd /Volumes/Data/ai_projects/wingman-system/wingman
+docker compose -f docker-compose.yml -p wingman-test up -d
+```
+
+**Health check**:
+```bash
+curl -s http://127.0.0.1:8101/health | python3 -m json.tool
+```
+
+**Get API keys**:
+```bash
+cat /Volumes/Data/ai_projects/wingman-system/wingman/.env.test | grep WINGMAN_APPROVAL_REQUEST_KEY
+cat /Volumes/Data/ai_projects/wingman-system/wingman/.env.test | grep WINGMAN_APPROVAL_READ_KEY
+```
+
+### PRD Environment
+
+**Purpose**: Production operations with strict approval controls
+**API URL**: `http://127.0.0.1:5001`
+**Behavior**: ALL destructive operations require Mark's manual approval via Telegram
+**API Keys**: From `/Volumes/Data/ai_projects/wingman-system/wingman/.env.prd`
+
+**Start PRD stack**:
+```bash
+cd /Volumes/Data/ai_projects/wingman-system/wingman
+docker compose -f docker-compose.prd.yml -p wingman-prd --env-file .env.prd up -d
+```
+
+**Health check**:
+```bash
+curl -s http://127.0.0.1:5001/health | python3 -m json.tool
+```
+
+**Get API keys**:
+
+```bash
+# CRITICAL: Never commit .env.prd - it contains production secrets
+cat /Volumes/Data/ai_projects/wingman-system/wingman/.env.prd | grep WINGMAN_APPROVAL_READ_KEY
+```
+
+### Which Environment to Use?
+
+| Scenario                              | Environment | Auto-Approve                          |
+| ------------------------------------- | ----------- | ------------------------------------- |
+| Development, testing, experimentation | TEST        | ✅ Yes (most operations)              |
+| Production deployments                | PRD         | ❌ No - requires Telegram approval    |
+| FALSE claim testing                   | TEST        | ✅ Yes (but still triggers alerts)    |
+| Real infrastructure changes           | PRD         | ❌ No - human approval required       |
+
+**CRITICAL**: Both environments enforce claim verification via watcher. FALSE claims will trigger alerts and eventual quarantine in either environment.
+
+---
+
 ## Integration Steps
 
 ### Step 1: Configure Your System
 
-Add to your `.env` file:
+Add to your `.env` file (choose TEST or PRD configuration):
+
+**For TEST environment** (`.env.test` or `.env`):
 
 ```bash
-# Wingman Integration
+# Wingman Integration - TEST
 WINGMAN_API_URL=http://127.0.0.1:8101
 WINGMAN_APPROVAL_REQUEST_KEY=XuDeKtTJ6bldz_7igJRTfm-nGyc2BWj5d5xyRCKptlY
 WINGMAN_APPROVAL_READ_KEY=XuDeKtTJ6bldz_7igJRTfm-nGyc2BWj5d5xyRCKptlY
 
 # Your system identifier (for audit trail)
 SYSTEM_NAME=intel-system  # or cv-automation, mem0, etc.
-DEPLOYMENT_ENV=test  # or prd
+DEPLOYMENT_ENV=test
 ```
+
+**For PRD environment** (`.env.prd`):
+
+```bash
+# Wingman Integration - PRD
+WINGMAN_API_URL=http://127.0.0.1:5001
+WINGMAN_APPROVAL_REQUEST_KEY=outgunning-web-serin-profounder-swans-globule
+WINGMAN_APPROVAL_READ_KEY=outgunning-web-serin-profounder-swans-globule
+
+# Your system identifier (for audit trail)
+SYSTEM_NAME=intel-system  # or cv-automation, mem0, etc.
+DEPLOYMENT_ENV=prd
+```
+
+**CRITICAL**: Get actual PRD keys from `/Volumes/Data/ai_projects/wingman-system/wingman/.env.prd`. NEVER commit `.env.prd` to git.
 
 ### Step 2: Create Wingman Client Library (Optional)
 
