@@ -46,6 +46,19 @@ def store_validation_result(
         conn = _get_postgres_connection()
         cursor = conn.cursor()
 
+        # Check if approval exists in Postgres (may be in-memory in TEST mode)
+        cursor.execute("SELECT COUNT(*) FROM approvals WHERE id = %s", (approval_id,))
+        approval_exists = cursor.fetchone()[0] > 0
+
+        if not approval_exists:
+            # Approval is in memory (TEST mode), skip validation storage
+            cursor.close()
+            conn.close()
+            return True  # Not an error - just skip storage in memory mode
+
+        # Extract validator scores (flat dict of validator_name -> int)
+        validator_scores = validation_result.get('validator_scores', {})
+
         cursor.execute("""
             INSERT INTO validation_results (
                 approval_id,
@@ -61,10 +74,19 @@ def store_validation_result(
             approval_id,
             validation_result.get('recommendation', 'MANUAL_REVIEW'),
             validation_result.get('overall_score'),
-            json.dumps(validation_result.get('validator_scores', {}).get('semantic', {})),
-            json.dumps(validation_result.get('validator_scores', {}).get('code_scanner', {})),
-            json.dumps(validation_result.get('validator_scores', {}).get('dependency', {})),
-            json.dumps(validation_result.get('validator_scores', {}).get('content_quality', {})),
+            json.dumps({
+                'score': validator_scores.get('semantic_analyzer', 0),
+                'risk_level': validation_result.get('risk_level', 'UNKNOWN')
+            }),
+            json.dumps({
+                'score': validator_scores.get('code_scanner', 0)
+            }),
+            json.dumps({
+                'score': validator_scores.get('dependency_analyzer', 0)
+            }),
+            json.dumps({
+                'score': validator_scores.get('content_quality', 0)
+            }),
             validation_result.get('reasoning', '')
         ))
 

@@ -309,13 +309,28 @@ class WingmanClient:
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 403:
                 # Worker is quarantined
+                error_data = e.response.json()
                 return {
                     "approval_id": None,
                     "needs_approval": False,
                     "auto_approved": False,
                     "status": "QUARANTINED",
+                    "rejection_reason": error_data.get("rejection_reason", "WORKER_QUARANTINED"),
                     "capability_token": None,
-                    "reason": e.response.json().get("reason", "Worker quarantined")
+                    "reason": error_data.get("reason", "Worker quarantined")
+                }
+            elif e.response.status_code == 422:
+                # Validation failed
+                error_data = e.response.json()
+                return {
+                    "approval_id": error_data.get("request", {}).get("request_id"),
+                    "needs_approval": False,
+                    "auto_approved": False,
+                    "status": "VALIDATION_FAILED",
+                    "rejection_reason": error_data.get("rejection_reason", "VALIDATION_FAILED"),
+                    "capability_token": None,
+                    "reason": error_data.get("validation", {}).get("reasoning", "Validation failed"),
+                    "validation": error_data.get("validation")
                 }
             raise
 
@@ -619,6 +634,134 @@ curl -X POST http://127.0.0.1:8101/approvals/request \
 ```
 
 HTTP Status: **403 Forbidden**
+
+---
+
+## HTTP Status Codes and Rejection Reasons
+
+Wingman uses different HTTP status codes to distinguish between rejection types:
+
+### 403 Forbidden - Worker Quarantined
+
+**When**: Worker has been quarantined by Watcher due to suspicious behavior
+
+**Response**:
+```json
+{
+  "needs_approval": false,
+  "status": "AUTO_REJECTED",
+  "rejection_reason": "WORKER_QUARANTINED",
+  "reason": "Worker quarantined: Repeated validation failures",
+  "quarantined_at": "2026-02-16T10:30:00Z",
+  "environment": "test",
+  "message": "Contact Mark to release this worker via /release_worker command or POST /watcher/release/{worker_id}"
+}
+```
+
+**Client Handling**:
+- Worker is actively blocked and cannot make further requests
+- Contact system administrator (Mark) to investigate and release
+- Do NOT retry - quarantine must be manually lifted
+
+### 422 Unprocessable Entity - Validation Failed
+
+**When**: Instruction content failed validation (secrets found, low quality, dangerous patterns)
+
+**Response**:
+```json
+{
+  "needs_approval": false,
+  "status": "AUTO_REJECTED",
+  "rejection_reason": "VALIDATION_FAILED",
+  "request": { /* approval request details */ },
+  "validation": {
+    "overall_score": 45,
+    "recommendation": "REJECT",
+    "risk_level": "CRITICAL",
+    "reasoning": "Code scanner found secrets; immediate reject.",
+    "validator_scores": {
+      "code_scanner": 10,
+      "content_quality": 55,
+      "dependency_analyzer": 60,
+      "semantic_analyzer": 75
+    },
+    "profile": "deployment",
+    "active_validators": ["code_scanner", "content_quality", "dependency_analyzer", "semantic_analyzer"]
+  }
+}
+```
+
+**Client Handling**:
+- Instruction content needs improvement (see validation details)
+- Review `validation.reasoning` for specific issues
+- Check `validation.validator_scores` to identify weak areas
+- Fix the instruction and retry
+- Common issues:
+  - Secrets/credentials in instruction text (code_scanner)
+  - Missing or vague 10-point framework sections (content_quality)
+  - High-risk dependencies without mitigation (dependency_analyzer)
+  - Ambiguous or dangerous intent (semantic_analyzer)
+
+### 200 OK - Auto-Approved or Pending
+
+**Auto-Approved (TEST environment)**:
+```json
+{
+  "needs_approval": false,
+  "status": "AUTO_APPROVED",
+  "approval_id": "uuid",
+  "auto_approved": true,
+  "capability_token": "jwt_token_here"
+}
+```
+
+**Pending Manual Review (PRD environment)**:
+```json
+{
+  "needs_approval": true,
+  "status": "PENDING",
+  "approval_id": "uuid",
+  "message": "Approval request sent to Mark via Telegram"
+}
+```
+
+### Client Code Pattern
+
+```python
+response = requests.post(
+    f"{WINGMAN_API_URL}/approvals/request",
+    headers={"X-Wingman-Approval-Request-Key": REQUEST_KEY},
+    json=approval_request
+)
+
+if response.status_code == 403:
+    data = response.json()
+    if data.get("rejection_reason") == "WORKER_QUARANTINED":
+        print(f"❌ Worker quarantined: {data.get('reason')}")
+        print(f"⚠️ Contact administrator to investigate and release worker")
+        sys.exit(1)
+
+elif response.status_code == 422:
+    data = response.json()
+    if data.get("rejection_reason") == "VALIDATION_FAILED":
+        validation = data.get("validation", {})
+        print(f"❌ Validation failed: {validation.get('reasoning')}")
+        print(f"📊 Overall score: {validation.get('overall_score')}/100")
+        print(f"🔍 Validator scores:")
+        for validator, score in validation.get("validator_scores", {}).items():
+            print(f"  - {validator}: {score}")
+        print(f"💡 Fix the instruction content and retry")
+        sys.exit(1)
+
+elif response.status_code == 200:
+    data = response.json()
+    if data.get("status") == "AUTO_APPROVED":
+        print(f"✅ Auto-approved: {data.get('approval_id')}")
+        # Use capability_token for execution
+    elif data.get("status") == "PENDING":
+        print(f"⏳ Pending approval: {data.get('approval_id')}")
+        # Poll for approval
+```
 
 ---
 

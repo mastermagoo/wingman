@@ -5,8 +5,75 @@ Scores each of the 10-point framework sections for quality (not just presence).
 "DELIVERABLES: TBD" scores 1/10.  A detailed deliverable with file paths and
 method names scores 8-10/10.
 
-Aggregate score: 0-100.
-Thresholds: auto-reject < 60, manual review 60-89, auto-approve >= 90.
+SCORING MECHANISM (per section, 0-10 points):
+----------------------------------------------
+Each section is evaluated on 5 dimensions:
+
+1. Length Score (0-3 points):
+   - 0 pts: Empty or <3 words
+   - 1 pt:  3-9 words (minimal content)
+   - 2 pts: 10-19 words (moderate content)
+   - 3 pts: 20+ words (detailed content)
+
+2. Specificity Score (0-3 points):
+   - Counts specificity indicators: backtick-quoted code/paths, file.ext patterns,
+     action verbs (create/implement/test), quantified metrics (90%, 100ms),
+     URLs, CONSTANTS/ENV_VARS
+   - 1 pt per indicator found (max 3 pts)
+
+3. Structure Score (0-3 points):
+   - 0 pts: Plain text paragraph
+   - 1 pt:  1 bullet/numbered item
+   - 1.5 pts: 1 bullet + substantive content (5+ words)
+   - 2 pts: 2+ bullets/numbered items
+   - 3 pts: 2+ bullets + substantive content (5+ words)
+
+4. Vagueness Penalty (-2 to 0 points):
+   - Deducts 1 pt per vague word found (tbd, todo, stuff, things, etc, n/a, whatever)
+   - Max penalty: -2 pts
+
+5. Section-Specific Bonus (0-2 points):
+   - DELIVERABLES: file paths (*.py), action verbs (create/implement)
+   - SUCCESS_CRITERIA: measurable criteria (%, pass/coverage), absolutes (all/every/100%/zero)
+   - BOUNDARIES: environment mentions (test/prd/prod), negations (no/not/never/only)
+   - TEST_PROCESS: test commands (pytest/python/curl), backtick-quoted commands
+   - MITIGATION: rollback/fallback plans, temporal markers (before/after/backup)
+   - RISK_ASSESSMENT: explicit risk levels (low/medium/high), reasoning (because/since)
+   - QUALITY_METRICS: quantified metrics (%), metric types (coverage/latency)
+   - DEPENDENCIES: named resources (ollama/api/docker), status indicators (available/running)
+   - TEST_RESULTS_FORMAT: format types (pytest/coverage/json), percentages
+   - RESOURCE_REQUIREMENTS: scope (local/test/api), availability markers
+
+AGGREGATE SCORING:
+------------------
+- Total Score: Sum of all 10 section scores (0-100)
+- Thresholds:
+  - <60:  AUTO_REJECT (insufficient quality)
+  - 60-89: MANUAL_REVIEW (adequate but needs human verification)
+  - >=90: AUTO_APPROVE (high quality, deployment-ready)
+
+WHY STRICT SCORING:
+-------------------
+The strict scoring enforces quality standards for deployment operations.
+Even with proper 10-point framework format, brief or vague sections score low.
+This is intentional - production deployments require detailed, specific instructions.
+
+EXAMPLES:
+---------
+BAD (scores ~3/10):
+  DELIVERABLES:
+  - Fix the issue
+
+MEDIUM (scores ~5/10):
+  DELIVERABLES:
+  - Update the code
+  - Test it
+
+GOOD (scores ~8/10):
+  DELIVERABLES:
+  - Implement `fix_validation_bug()` in `api_server.py:442`
+  - Add unit test in `tests/test_validation.py`
+  - Update schema migration `002_fix_constraint.sql`
 
 No external dependencies. Pure text analysis.
 """

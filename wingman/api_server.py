@@ -399,6 +399,7 @@ def approvals_request():
             return jsonify({
                 "needs_approval": False,
                 "status": "AUTO_REJECTED",
+                "rejection_reason": "WORKER_QUARANTINED",
                 "reason": f"Worker quarantined: {quarantine_status['reason']}",
                 "quarantined_at": quarantine_status["quarantined_at"],
                 "environment": quarantine_status.get("environment", "Unknown"),
@@ -443,6 +444,7 @@ def approvals_request():
             return jsonify({
                 "needs_approval": False,
                 "status": "AUTO_REJECTED",
+                "rejection_reason": "VALIDATION_FAILED",
                 "request": req.to_dict(),
                 "validation": {
                     "overall_score": validation_result.get("overall_score"),
@@ -453,7 +455,7 @@ def approvals_request():
                     "profile": validation_result.get("profile"),
                     "active_validators": validation_result.get("active_validators")
                 }
-            }), 403
+            }), 422
 
         # Run heuristic risk assessment
         use_consensus = (os.getenv("WINGMAN_CONSENSUS_ENABLED") or "").strip() == "1"
