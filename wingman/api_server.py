@@ -988,10 +988,8 @@ def index():
 
 
 if __name__ == '__main__':
-    internal_port = int(os.getenv('API_INTERNAL_PORT', 5000))
-    # Fallback for PRD compose which uses 8001 mapping
-    if os.getenv('DEPLOYMENT_ENV') == 'prd':
-        internal_port = 8001
-        
+    # Use API_PORT if set (from docker-compose), otherwise fall back to API_INTERNAL_PORT or 5000
+    internal_port = int(os.getenv('API_PORT') or os.getenv('API_INTERNAL_PORT', 5000))
+
     print(f"🚀 Starting Wingman Phase 3 API Server on port {internal_port}...")
     app.run(host='0.0.0.0', port=internal_port, debug=False)
