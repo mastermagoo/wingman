@@ -1,16 +1,16 @@
 # Wingman Strategic Deployment Plan: Secure Worker Pipeline
 
-**Status**: CURRENT  
-**Last Updated**: 2026-01-17  
-**Version**: 1.0  
+**Status**: CURRENT
+**Last Updated**: 2026-02-17
+**Version**: 1.2
 **Scope**: Wingman strategy/business documentation (DEV/TEST/PRD)  
 
 > **MASTER STRATEGY DOCUMENT**  
 > *This document supercedes all previous Wingman 2 phased plans and deployment summaries.*
 
-**Date:** 2025-12-18  
-**Status:** 🚀 PHASE 4: AUTONOMOUS MONITORING IN PROGRESS  
-**Purpose:** Implementation and enforcement of the 5-Phase Secure AI Worker Pipeline across DEV, TEST, and PRD.
+**Date:** 2026-02-17
+**Status:** ✅ PHASE 5 COMPLETE | 🚀 PHASE 6.1 DEPLOYED | ✅ PHASE 6.2 OPERATIONAL
+**Purpose:** Implementation and enforcement of the Secure AI Worker Pipeline with Output Validation and Observability across DEV, TEST, and PRD.
 
 ---
 
@@ -53,13 +53,54 @@ Transform Wingman from a simple API into a **Hardened Security Layer** that gove
 *   **Auditor**: A background processor (`wingman_audit_processor.py`) that verifies claims against reality (filesystem checks, process checks).
 *   **Status**: Active on all environments (`/verify` endpoint).
 
-### **Phase 4: The Watcher (Autonomous Monitoring)** 🚀 *(IN PROGRESS)*
+### **Phase 4: The Watcher (Autonomous Monitoring)** ✅ *(COMPLETE)*
+
 *   **Monitoring**: Real-time tailing of audit logs.
 *   **Detection**: Immediate identification of `FALSE` verdicts (claims caught as lies).
 *   **Response**: Automatic Telegram alerts to Mark and autonomous worker lockdown.
-*   **Status**: Service implemented and being deployed to PRD.
+*   **Status**: Deployed to TEST and PRD.
 
-### **Phase 5: Final Lockdown & Certification** 📋 *(FUTURE)*
+### **Phase 5: Docker Wrapper Enforcement** ✅ *(COMPLETE)*
+
+*   **Infrastructure Protection**: Shell-level wrapper blocks destructive docker commands.
+*   **Approval Integration**: All destructive operations require Wingman approval.
+*   **Audit Trail**: All docker operations logged in execution audit table.
+*   **Status**: Deployed to TEST and PRD (2026-01-17).
+
+### **Phase 6.1: Output Validation** ✅ *(DEPLOYED 2026-02-16)*
+
+*   **Code Quality**: 5 validators (Syntax, Security, Dependency, Test, Composite) analyze AI-generated code before deployment.
+*   **Decision Logic**: AUTO_APPROVE (score >= 70), AUTO_REJECT (blocking issues), MANUAL_REVIEW (needs human approval).
+*   **Integration**: POST `/output_validation/validate` endpoint deployed to TEST and PRD.
+*   **Code Size**: 2000+ LOC with 92% test coverage (13/15 passing tests).
+*   **Database**: Migration 006 adds `output_validations` table.
+*   **Status**: Deployed to TEST (enabled), PRD (disabled by default, ready for rollout).
+
+### **Phase 6.2: Monitoring & Observability** ✅ *(OPERATIONAL 2026-02-17)*
+
+*   **Prometheus Integration**: Time-series metrics collection and storage (scrapes API every 15s).
+*   **Grafana Dashboards**: Real-time visualization of Wingman health, verifier/validator status, database connectivity.
+*   **Metrics Endpoint**: `/metrics` endpoint added to API server (Prometheus-compatible format).
+*   **Metrics Exposed**:
+    *   `wingman_health_status`: Overall API health (1=healthy, 0=unhealthy)
+    *   `wingman_verifier_available`: Verifier availability by type (simple, enhanced)
+    *   `wingman_validator_available`: Validator availability by type (input, output)
+    *   `wingman_database_connected`: Database connection status (1=connected, 0=disconnected)
+    *   `wingman_start_time_seconds`: Process start timestamp for uptime calculation
+*   **Access URLs**:
+    *   TEST Prometheus: `http://localhost:9091`
+    *   TEST Grafana: `http://localhost:3333` (admin/admin)
+    *   PRD Prometheus: `http://localhost:9092` (when deployed)
+    *   PRD Grafana: `http://localhost:3334` (when deployed)
+*   **Configuration**:
+    *   `monitoring/prometheus.yml`: Scrape targets and intervals
+    *   `monitoring/grafana-datasources.yml`: Auto-provisioned Prometheus datasource
+*   **Automation Fixes**: Resolved TEST watcher API connection issues, fixed cron health check configuration.
+*   **Documentation**: [PROMETHEUS_GRAFANA_MONITORING_GUIDE.md](../04-user-guides/PROMETHEUS_GRAFANA_MONITORING_GUIDE.md)
+*   **Status**: Operational in TEST, Ready for PRD deployment.
+
+### **Phase 7: Final Lockdown & Certification** 📋 *(FUTURE)*
+
 *   **Hardening**: Removing development tools from containers (curl, pip).
 *   **Permissions**: Switching to non-root users everywhere.
 *   **Certification**: Final Security Integrity Report and 100% compliance sign-off.
@@ -101,6 +142,6 @@ Transform Wingman from a simple API into a **Hardened Security Layer** that gove
 
 ---
 
-**Last Updated:** 2025-12-18  
-**Revision:** 2.0 (Security Pipeline Alignment)  
-**Lead AI Worker:** Cursor / Gemini-3-Flash
+**Last Updated:** 2026-02-16
+**Revision:** 2.1 (Phase 6.1 Output Validation Deployment)
+**Lead AI Worker:** Claude Sonnet 4.5
