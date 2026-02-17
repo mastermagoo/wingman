@@ -42,6 +42,12 @@ try:
 except ImportError:
     composite_validator = None
 
+try:
+    from output_validation.output_composite_validator import OutputCompositeValidator
+    output_composite_validator = OutputCompositeValidator()
+except ImportError:
+    output_composite_validator = None
+
 app = Flask(__name__)
 CORS(app)  # Allow all origins for now
 
@@ -696,7 +702,7 @@ def health():
     return jsonify(
         {
             "status": "healthy",
-            "phase": "3",
+            "phase": "6.1",
             "verifiers": {
                 "simple": "available",
                 "enhanced": (
@@ -705,10 +711,59 @@ def health():
                     else "unavailable"
                 ),
             },
+            "validators": {
+                "input_validation": "available" if composite_validator else "unavailable",
+                "output_validation": "available" if output_composite_validator else "unavailable"
+            },
             "database": "connected" if db and db_available else "memory",
             "timestamp": datetime.now().isoformat(),
         }
     ), 200
+
+
+@app.route('/metrics', methods=['GET'])
+def metrics():
+    """
+    Prometheus-compatible metrics endpoint
+    Returns metrics in Prometheus text format
+    """
+    from flask import Response
+
+    # Basic metrics in Prometheus format
+    metrics_output = []
+
+    # Health status (1 = healthy, 0 = unhealthy)
+    metrics_output.append("# HELP wingman_health_status Health status of Wingman API (1=healthy, 0=unhealthy)")
+    metrics_output.append("# TYPE wingman_health_status gauge")
+    metrics_output.append("wingman_health_status 1")
+
+    # Verifiers availability
+    metrics_output.append("# HELP wingman_verifier_available Verifier availability (1=available, 0=unavailable)")
+    metrics_output.append("# TYPE wingman_verifier_available gauge")
+    metrics_output.append('wingman_verifier_available{verifier="simple"} 1')
+    enhanced_available = 1 if (hasattr(enhanced_verifier, "mistral_available") and enhanced_verifier.mistral_available) else 0
+    metrics_output.append(f'wingman_verifier_available{{verifier="enhanced"}} {enhanced_available}')
+
+    # Validators availability
+    metrics_output.append("# HELP wingman_validator_available Validator availability (1=available, 0=unavailable)")
+    metrics_output.append("# TYPE wingman_validator_available gauge")
+    input_val_available = 1 if composite_validator else 0
+    output_val_available = 1 if output_composite_validator else 0
+    metrics_output.append(f'wingman_validator_available{{validator="input_validation"}} {input_val_available}')
+    metrics_output.append(f'wingman_validator_available{{validator="output_validation"}} {output_val_available}')
+
+    # Database status
+    metrics_output.append("# HELP wingman_database_connected Database connection status (1=connected, 0=disconnected)")
+    metrics_output.append("# TYPE wingman_database_connected gauge")
+    db_connected = 1 if (db and db_available) else 0
+    metrics_output.append(f"wingman_database_connected {db_connected}")
+
+    # Uptime (simple timestamp)
+    metrics_output.append("# HELP wingman_start_time_seconds Start time of the process in unix time")
+    metrics_output.append("# TYPE wingman_start_time_seconds gauge")
+    metrics_output.append(f"wingman_start_time_seconds {int(time.time())}")
+
+    return Response("\n".join(metrics_output) + "\n", mimetype="text/plain")
 
 
 @app.route('/stats', methods=['GET'])
@@ -959,6 +1014,361 @@ def watcher_release(worker_id: str):
         return jsonify({"error": str(e)}), 500
 
 
+def store_output_validation_result(worker_id: str, result: Dict[str, Any]) -> Optional[int]:
+    """
+    Store output validation result in database.
+
+    Args:
+        worker_id: Worker that generated code
+        result: Validation result from OutputCompositeValidator
+
+    Returns:
+        validation_id if stored successfully, None otherwise
+    """
+    try:
+        import psycopg2
+        conn = psycopg2.connect(
+            host=os.getenv("DB_HOST", "postgres"),
+            port=int(os.getenv("DB_PORT", "5432")),
+            dbname=os.getenv("DB_NAME", "wingman"),
+            user=os.getenv("DB_USER", "wingman"),
+            password=os.getenv("DB_PASSWORD", "")
+        )
+        cursor = conn.cursor()
+
+        # Extract validation results
+        validation_results = result.get("validation_results", {})
+
+        cursor.execute("""
+            INSERT INTO output_validations (
+                worker_id,
+                task_name,
+                generated_files,
+                decision,
+                overall_score,
+                syntax_result,
+                security_result,
+                dependency_result,
+                test_result,
+                blocking_issues,
+                recommendation
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING validation_id
+        """, (
+            worker_id,
+            result.get("task_name"),
+            json.dumps(result.get("files_validated", [])),
+            result.get("decision"),
+            result.get("overall_score"),
+            json.dumps(validation_results.get("syntax", {})),
+            json.dumps(validation_results.get("security", {})),
+            json.dumps(validation_results.get("dependencies", {})),
+            json.dumps(validation_results.get("tests", {})),
+            json.dumps(result.get("blocking_issues", [])),
+            result.get("recommendation")
+        ))
+
+        validation_id = cursor.fetchone()[0]
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return validation_id
+    except Exception as e:
+        print(f"⚠️ Failed to store output validation result: {e}")
+        traceback.print_exc()
+        return None
+
+
+def send_telegram_validation_report(worker_id: str, result: Dict[str, Any], approval_id: Optional[str] = None):
+    """
+    Send validation report to Telegram for manual review.
+
+    Args:
+        worker_id: Worker that generated code
+        result: Validation result
+        approval_id: Optional approval ID if manual review created
+    """
+    telegram_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID", "")
+
+    if not telegram_token or not chat_id:
+        print("⚠️ Telegram notification skipped (missing credentials)")
+        return
+
+    # Build message
+    decision = result.get("decision", "UNKNOWN")
+    score = result.get("overall_score", 0)
+    task_name = result.get("task_name", "Unknown Task")
+    files = result.get("files_validated", [])
+    blocking_issues = result.get("blocking_issues", [])
+    recommendation = result.get("recommendation", "")
+
+    # Emoji based on decision
+    emoji_map = {
+        "APPROVE": "✅",
+        "REJECT": "❌",
+        "MANUAL_REVIEW": "⚠️"
+    }
+    emoji = emoji_map.get(decision, "❓")
+
+    message = f"""{emoji} *OUTPUT VALIDATION: {decision}*
+
+*Worker*: `{worker_id}`
+*Task*: {task_name}
+*Score*: {score}/100
+
+*Files*: {len(files)}
+{chr(10).join(f"  • `{os.path.basename(f)}`" for f in files[:5])}
+{f"  ... and {len(files) - 5} more" if len(files) > 5 else ""}
+
+*Recommendation*: {recommendation}
+"""
+
+    if blocking_issues:
+        message += f"\n*Blocking Issues*:\n"
+        for issue in blocking_issues[:3]:
+            message += f"  • {issue}\n"
+        if len(blocking_issues) > 3:
+            message += f"  ... and {len(blocking_issues) - 3} more\n"
+
+    if approval_id:
+        message += f"\n*Approval ID*: `{approval_id}`"
+
+    # Add environment
+    env = os.getenv("DEPLOYMENT_ENV", "test").upper()
+    message += f"\n*Environment*: {env}"
+
+    url = f"https://api.telegram.org/bot{telegram_token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": "Markdown",
+        "disable_notification": decision == "APPROVE"  # Don't notify on auto-approve
+    }
+
+    try:
+        resp = requests.post(url, json=payload, timeout=10)
+        if resp.status_code == 200:
+            print(f"📨 Sent validation report to Telegram: {decision}")
+        else:
+            print(f"⚠️ Failed to send Telegram notification: {resp.status_code}")
+    except Exception as e:
+        print(f"⚠️ Failed to send Telegram notification: {e}")
+
+
+@app.route("/output_validation/validate", methods=["POST"])
+def validate_output():
+    """
+    Phase 6.1: Validate AI worker generated code output.
+
+    Called after AI worker completes code generation.
+    Validates generated code before deployment.
+
+    Body:
+      {
+        "worker_id": "WORKER_001",
+        "generated_files": ["path/to/file1.py", "path/to/file2.py"],
+        "task_name": "Generate Semantic Analyzer"  // optional
+      }
+
+    Returns:
+      - 200 OK: Validation passed (APPROVE or MANUAL_REVIEW pending approval)
+      - 403 Forbidden: Validation failed (REJECT - code blocked)
+      - 500 Error: Validation system error
+    """
+    try:
+        # Check if output validation is available
+        if output_composite_validator is None:
+            return jsonify({
+                "error": "Output validation not available (module not loaded)",
+                "status": "ERROR"
+            }), 500
+
+        data = request.get_json() or {}
+        worker_id = str(data.get("worker_id", "unknown"))
+        generated_files = data.get("generated_files", [])
+        task_name = data.get("task_name", "Code Generation")
+
+        if not generated_files:
+            return jsonify({
+                "error": "Missing 'generated_files' field",
+                "status": "ERROR"
+            }), 400
+
+        # Check if worker is quarantined
+        quarantine_status = is_quarantined(worker_id)
+        if quarantine_status["quarantined"]:
+            return jsonify({
+                "status": "REJECTED",
+                "rejection_reason": "WORKER_QUARANTINED",
+                "reason": f"Worker quarantined: {quarantine_status['reason']}",
+                "quarantined_at": quarantine_status["quarantined_at"],
+                "message": "Contact Mark to release this worker via /release_worker command"
+            }), 403
+
+        # Run output validation pipeline
+        print(f"🔍 Running output validation for {worker_id}: {len(generated_files)} files")
+        result = output_composite_validator.validate_output(
+            worker_id=worker_id,
+            generated_files=generated_files,
+            task_name=task_name
+        )
+
+        # Store validation results in database
+        validation_id = store_output_validation_result(worker_id, result)
+        if validation_id:
+            print(f"✅ Stored validation result: validation_id={validation_id}")
+
+        decision = result.get("decision")
+        blocking_issues = result.get("blocking_issues", [])
+
+        # Decision logic
+        if decision == "REJECT":
+            # Auto-reject: critical issues detected
+            # Quarantine worker if critical security issues
+            has_critical_security = False
+            security_results = result.get("validation_results", {}).get("security", {})
+            for sec_result in security_results.values():
+                if sec_result.get("severity") == "CRITICAL":
+                    has_critical_security = True
+                    break
+
+            if has_critical_security:
+                # Import quarantine function
+                try:
+                    import redis
+                    r = redis.Redis(
+                        host=os.getenv("REDIS_HOST", "redis"),
+                        port=int(os.getenv("REDIS_PORT", "6379")),
+                        db=0,
+                        decode_responses=True
+                    )
+                    r.sadd("quarantined_workers", worker_id)
+                    r.hset(f"quarantine:{worker_id}", mapping={
+                        "reason": "CRITICAL security issue in generated code",
+                        "quarantined_at": datetime.now().isoformat(),
+                        "validation_id": str(validation_id) if validation_id else "unknown",
+                        "environment": os.getenv("DEPLOYMENT_ENV", "test")
+                    })
+                    print(f"🔒 Worker {worker_id} quarantined due to CRITICAL security issue")
+                except Exception as e:
+                    print(f"⚠️ Failed to quarantine worker: {e}")
+
+            # Send Telegram notification for rejection
+            send_telegram_validation_report(worker_id, result)
+
+            return jsonify({
+                "status": "REJECTED",
+                "reason": result.get("recommendation"),
+                "validation_report": {
+                    "decision": decision,
+                    "overall_score": result.get("overall_score"),
+                    "blocking_issues": blocking_issues,
+                    "recommendation": result.get("recommendation"),
+                    "validation_id": validation_id
+                }
+            }), 403
+
+        elif decision == "MANUAL_REVIEW":
+            # Create approval request for human review
+            approval_req = approval_store.create_request(
+                worker_id=worker_id,
+                task_name=f"Review Generated Code: {task_name}",
+                instruction=f"Output validation requires manual review.\n\nFiles: {', '.join(os.path.basename(f) for f in generated_files)}\n\nScore: {result.get('overall_score')}/100\n\nRecommendation: {result.get('recommendation')}",
+                risk_level="MEDIUM",
+                risk_reason=f"Output validation score: {result.get('overall_score')}/100",
+                status="PENDING"
+            )
+
+            # Link approval to validation in database
+            if validation_id and approval_req:
+                try:
+                    import psycopg2
+                    conn = psycopg2.connect(
+                        host=os.getenv("DB_HOST", "postgres"),
+                        port=int(os.getenv("DB_PORT", "5432")),
+                        dbname=os.getenv("DB_NAME", "wingman"),
+                        user=os.getenv("DB_USER", "wingman"),
+                        password=os.getenv("DB_PASSWORD", "")
+                    )
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "UPDATE output_validations SET approval_id = %s WHERE validation_id = %s",
+                        (approval_req.request_id, validation_id)
+                    )
+                    conn.commit()
+                    cursor.close()
+                    conn.close()
+                except Exception as e:
+                    print(f"⚠️ Failed to link approval to validation: {e}")
+
+            # Send Telegram notification with validation report
+            send_telegram_validation_report(
+                worker_id,
+                result,
+                approval_id=approval_req.request_id if approval_req else None
+            )
+
+            return jsonify({
+                "status": "PENDING",
+                "approval_id": approval_req.request_id if approval_req else None,
+                "validation_report": {
+                    "decision": decision,
+                    "overall_score": result.get("overall_score"),
+                    "blocking_issues": blocking_issues,
+                    "recommendation": result.get("recommendation"),
+                    "validation_id": validation_id
+                },
+                "message": "Manual review required. Approval request created."
+            }), 200
+
+        else:  # APPROVE
+            # Auto-approve: code passed validation
+            # Send Telegram notification (low priority)
+            send_telegram_validation_report(worker_id, result)
+
+            return jsonify({
+                "status": "APPROVED",
+                "validation_report": {
+                    "decision": decision,
+                    "overall_score": result.get("overall_score"),
+                    "recommendation": result.get("recommendation"),
+                    "validation_id": validation_id
+                },
+                "message": "Code passed validation. Safe to deploy."
+            }), 200
+
+    except Exception as e:
+        # Validation system error - fallback to MANUAL_REVIEW
+        print(f"❌ Output validation error: {e}")
+        traceback.print_exc()
+
+        # Try to create approval request for manual review
+        try:
+            approval_req = approval_store.create_request(
+                worker_id=worker_id if 'worker_id' in locals() else "unknown",
+                task_name=f"Review Generated Code (validation error): {task_name if 'task_name' in locals() else 'Unknown'}",
+                instruction=f"Output validation failed with error. Manual review required.\n\nError: {str(e)}",
+                risk_level="HIGH",
+                risk_reason="Validation system error",
+                status="PENDING"
+            )
+
+            return jsonify({
+                "status": "PENDING",
+                "approval_id": approval_req.request_id if approval_req else None,
+                "error": "Validation system error - manual review required",
+                "message": "Validation failed, but approval request created for safety"
+            }), 200
+        except Exception as e2:
+            # Complete failure - return error
+            return jsonify({
+                "error": f"Validation system error: {str(e)}",
+                "status": "ERROR"
+            }), 500
+
+
 @app.route('/', methods=['GET'])
 def index():
     """
@@ -966,8 +1376,8 @@ def index():
     """
     return jsonify({
         "name": "Wingman Verification API",
-        "version": "4.0.0",
-        "phase": "4_enhanced",
+        "version": "6.1.0",
+        "phase": "6_output_validation",
         "endpoints": {
             "POST /check": "Validate instruction (Phase 2)",
             "POST /log_claim": "Record worker claim (Phase 3)",
@@ -980,6 +1390,7 @@ def index():
             "POST /watcher/acknowledge/<alert_id>": "Acknowledge watcher alert (Phase 4 Enhanced)",
             "GET /watcher/alerts": "Get alert history (Phase 4 Enhanced)",
             "POST /watcher/release/<worker_id>": "Release quarantined worker (Phase 4 Enhanced)",
+            "POST /output_validation/validate": "Validate AI worker output (Phase 6.1)",
             "GET /health": "Check API status",
             "GET /stats": "Get verification statistics"
         },
