@@ -2,7 +2,8 @@
 
 **Purpose**: Get Claude working in intel-system to use Wingman as approval authority
 **Time**: 15 minutes
-**Date**: 2026-02-14
+**Date**: 2026-02-17
+**Updated**: Phase 6.1 Output Validation + Phase 6.2 Monitoring
 
 ---
 
@@ -154,8 +155,16 @@ curl -s http://127.0.0.1:8101/health | python3 -m json.tool
 # Should return:
 # {
 #   "status": "healthy",
-#   "phase": "3",
-#   ...
+#   "phase": "6.1",
+#   "database": "memory",
+#   "validators": {
+#     "input_validation": "available",
+#     "output_validation": "available"
+#   },
+#   "verifiers": {
+#     "simple": "available",
+#     "enhanced": "unavailable"
+#   }
 # }
 ```
 
@@ -175,8 +184,16 @@ curl -s http://127.0.0.1:5001/health | python3 -m json.tool
 # Should return:
 # {
 #   "status": "healthy",
-#   "phase": "3",
-#   ...
+#   "phase": "6.1",
+#   "database": "connected",
+#   "validators": {
+#     "input_validation": "available",
+#     "output_validation": "available"
+#   },
+#   "verifiers": {
+#     "simple": "available",
+#     "enhanced": "unavailable"
+#   }
 # }
 ```
 
@@ -388,7 +405,7 @@ Expected:
 ## Success Criteria
 
 ✅ All tests pass:
-1. Health check returns `{"status": "healthy"}`
+1. Health check returns `{"status": "healthy", "phase": "6.1"}`
 2. Approval request returns `status=APPROVED`
 3. Command execution via gateway succeeds
 4. Python client works
@@ -397,12 +414,51 @@ Expected:
 
 ---
 
+## Phase 6.1/6.2 Features
+
+### Output Validation (Phase 6.1)
+
+If your AI workers generate code, use output validation BEFORE deployment:
+
+```python
+# Validate AI-generated code
+validation_result = client.validate_output(
+    worker_id="intel_code_generator",
+    generated_files=["/path/to/generated_script.py"],
+    task_name="Generate backup script"
+)
+
+if validation_result['status'] == 'APPROVED':
+    print("✅ Code passed validation - safe to deploy")
+elif validation_result['status'] == 'REJECTED':
+    print(f"❌ Code rejected: {validation_result['reason']}")
+else:  # PENDING
+    print("⏳ Code requires manual review")
+```
+
+**Documentation**: [OUTPUT_VALIDATION_USER_GUIDE.md](OUTPUT_VALIDATION_USER_GUIDE.md)
+
+### Monitoring & Observability (Phase 6.2)
+
+Real-time metrics and dashboards available:
+
+- **Prometheus**: http://localhost:9091 (metrics database)
+- **Grafana**: http://localhost:3333 (dashboards, login: admin/admin)
+- **Metrics Endpoint**: http://localhost:8101/metrics
+
+Monitor Wingman health, approval queue depth, validation success rates, and more.
+
+**Documentation**: [PROMETHEUS_GRAFANA_MONITORING_GUIDE.md](PROMETHEUS_GRAFANA_MONITORING_GUIDE.md)
+
+---
+
 ## Next Steps
 
 1. **Update Claude Context**: Tell Claude in intel-system about Wingman integration
 2. **Test Real Operations**: Try actual intel-system deployments through Wingman
-3. **Monitor for 24 Hours**: Watch for false positives/negatives
-4. **Expand to Other Systems**: cv-automation, mem0, etc.
+3. **Use Output Validation**: Validate any AI-generated code before deployment
+4. **Monitor Metrics**: Check Grafana dashboards for system health
+5. **Expand to Other Systems**: cv-automation, mem0, etc.
 
 ---
 

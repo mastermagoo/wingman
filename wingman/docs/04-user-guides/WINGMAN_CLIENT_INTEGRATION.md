@@ -2,7 +2,8 @@
 
 **Purpose**: Integrate external systems (like intel-system, cv-automation, mem0) with Wingman approval flow
 **Audience**: AI agents (Claude Code) working in client repositories
-**Date**: 2026-02-14
+**Date**: 2026-02-17
+**Updated**: Phase 6.1 Output Validation + Phase 6.2 Monitoring
 
 ---
 
@@ -11,9 +12,11 @@
 This guide shows how to integrate your system with Wingman as an **approval authority**. Wingman provides:
 
 1. **Human-in-the-loop approval** for destructive operations
-2. **Claim verification** via semantic analyzer + watcher
-3. **Worker quarantine** for compromised agents
-4. **Audit trail** of all operations
+2. **Output validation** for AI-generated code (Phase 6.1)
+3. **Claim verification** via semantic analyzer + watcher
+4. **Worker quarantine** for compromised agents
+5. **Audit trail** of all operations
+6. **Real-time monitoring** via Prometheus/Grafana (Phase 6.2)
 
 **Architecture**:
 ```
@@ -57,9 +60,17 @@ curl -s http://127.0.0.1:8101/health | python3 -m json.tool
 # Expected response:
 {
   "status": "healthy",
-  "phase": "3",
+  "phase": "6.1",
   "database": "memory",
-  "timestamp": "2026-02-14T..."
+  "validators": {
+    "input_validation": "available",
+    "output_validation": "available"
+  },
+  "verifiers": {
+    "simple": "available",
+    "enhanced": "unavailable"
+  },
+  "timestamp": "2026-02-17T..."
 }
 ```
 
@@ -917,6 +928,109 @@ Execute command (requires capability token).
   "exit_code": 0
 }
 ```
+
+---
+
+## Phase 6.1: Output Validation
+
+**Added**: 2026-02-16
+
+If your AI workers generate code, use output validation BEFORE deployment to ensure code quality and security.
+
+### Endpoint: `POST /output_validation/validate`
+
+```python
+import requests
+
+response = requests.post(
+    "http://127.0.0.1:8101/output_validation/validate",
+    json={
+        "worker_id": "YOUR_WORKER_ID",
+        "generated_files": [
+            "/path/to/generated_file1.py",
+            "/path/to/generated_file2.py"
+        ],
+        "task_name": "Generate backup script"
+    }
+)
+
+result = response.json()
+
+if result['status'] == 'APPROVED':
+    # Code passed all validators - safe to deploy
+    print("✅ Code validation passed")
+    print(f"Score: {result['validation_report']['overall_score']}")
+
+elif result['status'] == 'REJECTED':
+    # Code has blocking issues - DO NOT deploy
+    print("❌ Code validation failed")
+    print(f"Issues: {result['validation_report']['blocking_issues']}")
+
+else:  # PENDING
+    # Code needs manual review
+    print("⏳ Code requires manual review")
+    print(f"Approval ID: {result['approval_id']}")
+```
+
+### Validation Pipeline
+
+Code goes through 5 validators:
+
+1. **SyntaxValidator**: Python syntax checking
+2. **OutputSecurityScanner**: Security pattern detection (secrets, SQL injection, etc.)
+3. **DependencyVerifier**: Import validation and dependency checking
+4. **TestExecutor**: Automated test execution (if tests exist)
+5. **OutputCompositeValidator**: Aggregates results and makes decision
+
+### Decision Logic
+
+- **AUTO_APPROVE**: Score >= 70, no blocking issues
+- **AUTO_REJECT**: Score < 50 OR blocking issues (syntax errors, secrets, critical security issues)
+- **MANUAL_REVIEW**: Score 50-69 OR non-blocking concerns
+
+**Full Documentation**: [OUTPUT_VALIDATION_USER_GUIDE.md](OUTPUT_VALIDATION_USER_GUIDE.md)
+
+---
+
+## Phase 6.2: Monitoring & Observability
+
+**Added**: 2026-02-17
+
+Real-time metrics and dashboards for Wingman system health and performance.
+
+### Prometheus Metrics
+
+Access metrics at: `http://localhost:8101/metrics`
+
+Available metrics:
+- `wingman_health_status` - Overall health (1=healthy, 0=unhealthy)
+- `wingman_verifier_available` - Verifier availability by type
+- `wingman_validator_available` - Validator availability by type
+- `wingman_database_connected` - Database connection status
+- `wingman_start_time_seconds` - Process start time
+
+### Grafana Dashboards
+
+Access dashboards at: `http://localhost:3333` (login: admin/admin)
+
+Pre-configured datasource connects to Prometheus automatically.
+
+### Monitoring Your Integrations
+
+Track your system's interaction with Wingman:
+
+```promql
+# Query approval request rate for your system
+rate(wingman_approval_requests_total{system="intel-system"}[5m])
+
+# Check approval success rate
+wingman_approvals_approved_total / wingman_approval_requests_total
+
+# Monitor validation scores
+histogram_quantile(0.95, wingman_validation_score_bucket)
+```
+
+**Full Documentation**: [PROMETHEUS_GRAFANA_MONITORING_GUIDE.md](PROMETHEUS_GRAFANA_MONITORING_GUIDE.md)
 
 ---
 
