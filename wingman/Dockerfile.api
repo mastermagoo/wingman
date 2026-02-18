@@ -27,6 +27,9 @@ COPY consensus_verifier.py .
 COPY wingman_audit_processor.py .
 COPY wingman_watcher.py .
 COPY validation/ validation/
+COPY output_validation/ output_validation/
+COPY instruction_validation/ instruction_validation/
+COPY migrations/ migrations/
 
 # Create non-root user
 RUN useradd -m -u 1000 wingman && \

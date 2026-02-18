@@ -1,17 +1,30 @@
-# Output Validation User Guide
+# Wingman Validation User Guide
 
 **Created**: 2026-02-16
+**Updated**: 2026-02-18 (Phase 6.3 - Instruction Validation)
 **Status**: CURRENT
-**Scope**: Phase 6.1 Output Validation integration for AI workers
+**Scope**: Complete validation system for AI workers (instruction + output validation)
 
 ---
 
 ## Overview
 
-**Phase 6.1 Output Validation** provides automated quality and security validation for AI-generated code before deployment. This system ensures that code produced by AI workers meets quality standards and doesn't introduce security vulnerabilities.
+Wingman provides **two validation systems** to ensure AI worker quality and safety:
+
+1. **Instruction Validation (Phase 6.3)**: Validates instruction documents BEFORE AI worker execution
+2. **Output Validation (Phase 6.1)**: Validates generated code AFTER AI worker completes
+
+This two-stage validation provides early quality gates and post-execution safety checks.
 
 **Key Features**:
 
+**Instruction Validation**:
+- **10-Point Framework Checker**: Validates instruction completeness
+- **Quality Scoring**: 0-100 point scale with section-level feedback
+- **3 Decision Outcomes**: APPROVED, MANUAL_REVIEW, REJECTED
+- **Early Quality Gate**: Prevents expensive LLM execution on incomplete instructions
+
+**Output Validation**:
 - **5 Validators**: Syntax, Security, Dependency, Test Execution, Composite
 - **3 Decision Outcomes**: AUTO_APPROVE, AUTO_REJECT, MANUAL_REVIEW
 - **Security Integration**: Automatic worker quarantine on critical security issues
@@ -21,6 +34,57 @@
 ---
 
 ## Quick Start
+
+### Phase 6.3: Instruction Validation (BEFORE execution)
+
+Validate your instruction document before running AI workers:
+
+```bash
+curl -X POST http://127.0.0.1:8101/instruction_validation/validate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "instruction_content": "$(cat /path/to/instruction.md)",
+    "worker_id": "intel_worker_001"
+  }'
+```
+
+**Expected Response (APPROVED)**:
+
+```json
+{
+  "status": "APPROVED",
+  "score": 97,
+  "feedback": {
+    "section_scores": {
+      "DELIVERABLES": 10,
+      "SUCCESS_CRITERIA": 10,
+      "BOUNDARIES": 10,
+      "DEPENDENCIES": 9,
+      "MITIGATION": 10,
+      "TEST_PROCESS": 10,
+      "TEST_RESULTS_FORMAT": 9,
+      "TASK_CLASSIFICATION": 10,
+      "RETROSPECTIVE": 9,
+      "PERFORMANCE_REQUIREMENTS": 10
+    },
+    "framework_completeness": 1.0,
+    "total_sections": 10,
+    "found_sections": 10,
+    "missing_sections": 0
+  },
+  "missing_sections": [],
+  "quality_issues": []
+}
+```
+
+**Decision Thresholds**:
+- **≥80**: APPROVED - Proceed with AI worker execution
+- **50-79**: MANUAL_REVIEW - Human review recommended
+- **<50**: REJECTED - Instruction incomplete, fix before execution
+
+---
+
+### Phase 6.1: Output Validation (AFTER execution)
 
 ### 1. Validate Generated Code
 
@@ -189,6 +253,181 @@ Code requires manual review if:
 - Code quality concerns (poor documentation, complex logic)
 
 ---
+
+## Instruction Validation (Phase 6.3)
+
+### Overview
+
+Instruction validation provides early quality gates BEFORE expensive LLM execution. This prevents AI workers from starting with incomplete or low-quality instructions.
+
+### 10-Point Framework
+
+All instruction documents must include these sections:
+
+1. **DELIVERABLES** - What will be built
+2. **SUCCESS_CRITERIA** - How to measure success
+3. **BOUNDARIES** - What is in/out of scope
+4. **DEPENDENCIES** - Required resources and systems
+5. **MITIGATION** - Risk mitigation strategies
+6. **TEST_PROCESS** - How to test the deliverables
+7. **TEST_RESULTS_FORMAT** - Expected test output format
+8. **TASK_CLASSIFICATION** - Task type, risk level, duration
+9. **RETROSPECTIVE** - How to capture learnings
+10. **PERFORMANCE_REQUIREMENTS** - Performance targets and constraints
+
+### Scoring System
+
+Each section is scored 0-10 points:
+
+- **Section present**: +5 points
+- **Substantial content** (>100 chars): +2 points
+- **Structured** (bullet points, code blocks, numbered lists): +2 points
+- **Specific/measurable** (numbers, percentages, thresholds): +1 point
+
+**Total Score**: 100 points maximum (10 sections × 10 points)
+
+**Penalties**:
+- Missing section: -5 points (from base score)
+- Quality issue: -2 points per issue
+
+### Quality Issues Detected
+
+- Empty or very short instruction (<100 characters)
+- Missing critical sections (DELIVERABLES, SUCCESS_CRITERIA)
+- Vague language ("something", "maybe", "probably")
+- No concrete examples or code blocks (for long instructions)
+- No bullet points or structure (for medium-long instructions)
+
+### API Reference
+
+**Endpoint**: `POST /instruction_validation/validate`
+
+**Request Body**:
+
+```json
+{
+  "instruction_file": "/path/to/instruction.md",  // optional (if file path accessible)
+  "instruction_content": "markdown text",  // optional (alternative to file)
+  "worker_id": "intel_worker_001"  // optional
+}
+```
+
+**Note**: Use `instruction_content` when the API container doesn't have access to the file path. Read the file content and pass it as a string.
+
+**Response: APPROVED**:
+
+```json
+{
+  "status": "APPROVED",
+  "score": 97,
+  "feedback": {
+    "section_scores": {
+      "DELIVERABLES": 10,
+      "SUCCESS_CRITERIA": 10,
+      ...
+    },
+    "framework_completeness": 1.0,
+    "total_sections": 10,
+    "found_sections": 10,
+    "missing_sections": 0
+  },
+  "missing_sections": [],
+  "quality_issues": []
+}
+```
+
+**Response: MANUAL_REVIEW**:
+
+```json
+{
+  "status": "MANUAL_REVIEW",
+  "score": 67,
+  "feedback": {
+    "section_scores": {...},
+    "framework_completeness": 0.9,
+    "missing_sections": 1
+  },
+  "missing_sections": ["RETROSPECTIVE"],
+  "quality_issues": []
+}
+```
+
+**Response: REJECTED**:
+
+```json
+{
+  "status": "REJECTED",
+  "score": 20,
+  "feedback": {
+    "section_scores": {...},
+    "framework_completeness": 0.2,
+    "missing_sections": 8
+  },
+  "missing_sections": [
+    "BOUNDARIES",
+    "DEPENDENCIES",
+    "MITIGATION",
+    "TEST_PROCESS",
+    "TEST_RESULTS_FORMAT",
+    "TASK_CLASSIFICATION",
+    "RETROSPECTIVE",
+    "PERFORMANCE_REQUIREMENTS"
+  ],
+  "quality_issues": [
+    "Instruction too short (<100 characters)",
+    "Vague language detected: something"
+  ]
+}
+```
+
+### Integration Example
+
+**Before running AI workers**:
+
+```python
+import requests
+
+# Load instruction document
+with open("MASTER_WORK_INSTRUCTION.md", "r") as f:
+    instruction_content = f.read()
+
+# Validate instruction
+response = requests.post(
+    "http://127.0.0.1:8101/instruction_validation/validate",
+    json={
+        "instruction_content": instruction_content,
+        "worker_id": "intel_worker_pilot"
+    }
+)
+
+result = response.json()
+
+if result["status"] == "APPROVED":
+    print(f"✅ Instruction approved (score: {result['score']}/100)")
+    # Proceed with AI worker execution
+    run_ai_workers()
+elif result["status"] == "MANUAL_REVIEW":
+    print(f"⚠️ Manual review required (score: {result['score']}/100)")
+    print(f"Missing sections: {result['missing_sections']}")
+    # Wait for human approval or fix instruction
+elif result["status"] == "REJECTED":
+    print(f"❌ Instruction rejected (score: {result['score']}/100)")
+    print(f"Missing sections: {result['missing_sections']}")
+    print(f"Quality issues: {result['quality_issues']}")
+    # Fix instruction before execution
+```
+
+### Best Practices
+
+1. **Validate Early**: Run instruction validation before starting expensive LLM operations
+2. **Aim for 90+**: Target scores ≥90 for critical production work
+3. **Fix Missing Sections**: Add missing framework sections before execution
+4. **Add Specifics**: Include concrete examples, code blocks, and measurable criteria
+5. **Use Structure**: Organize content with bullet points and numbered lists
+
+---
+
+## Output Validation (Phase 6.1)
 
 ## Validators Explained
 
@@ -666,6 +905,6 @@ For issues or questions:
 
 ---
 
-**Document Status**: COMPLETE
-**Last Updated**: 2026-02-16
+**Document Status**: COMPLETE (updated for Phase 6.3)
+**Last Updated**: 2026-02-18
 **Maintainer**: Wingman Development Team

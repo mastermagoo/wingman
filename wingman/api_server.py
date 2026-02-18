@@ -48,6 +48,12 @@ try:
 except ImportError:
     output_composite_validator = None
 
+try:
+    from instruction_validation.instruction_composite_validator import InstructionCompositeValidator
+    instruction_composite_validator = InstructionCompositeValidator()
+except ImportError:
+    instruction_composite_validator = None
+
 app = Flask(__name__)
 CORS(app)  # Allow all origins for now
 
@@ -702,7 +708,7 @@ def health():
     return jsonify(
         {
             "status": "healthy",
-            "phase": "6.1",
+            "phase": "6.3",
             "verifiers": {
                 "simple": "available",
                 "enhanced": (
@@ -713,7 +719,8 @@ def health():
             },
             "validators": {
                 "input_validation": "available" if composite_validator else "unavailable",
-                "output_validation": "available" if output_composite_validator else "unavailable"
+                "output_validation": "available" if output_composite_validator else "unavailable",
+                "instruction_validation": "available" if instruction_composite_validator else "unavailable"
             },
             "database": "connected" if db and db_available else "memory",
             "timestamp": datetime.now().isoformat(),
@@ -1369,6 +1376,72 @@ def validate_output():
             }), 500
 
 
+@app.route("/instruction_validation/validate", methods=["POST"])
+def validate_instruction():
+    """
+    Phase 6.3: Validate instruction documents against 10-point framework.
+
+    Called before AI worker execution to validate instruction quality.
+    Provides early quality gate before expensive LLM execution.
+
+    Body:
+      {
+        "instruction_file": "/path/to/instruction.md",  // optional
+        "instruction_content": "markdown text",  // optional (alternative to file)
+        "worker_id": "WORKER_001"  // optional
+      }
+
+    Returns:
+      - 200 OK: Validation result (APPROVED, MANUAL_REVIEW, or REJECTED)
+      - 400 Bad Request: Missing required fields
+      - 500 Error: Validation system error
+    """
+    try:
+        # Check if instruction validation is available
+        if instruction_composite_validator is None:
+            return jsonify({
+                "error": "Instruction validation not available (module not loaded)",
+                "status": "ERROR"
+            }), 500
+
+        data = request.get_json() or {}
+        instruction_file = data.get("instruction_file")
+        instruction_content = data.get("instruction_content")
+        worker_id = data.get("worker_id")
+
+        # Validate input
+        if not instruction_file and not instruction_content:
+            return jsonify({
+                "error": "Missing 'instruction_file' or 'instruction_content' field",
+                "status": "ERROR"
+            }), 400
+
+        # Run instruction validation
+        print(f"🔍 Validating instruction for worker: {worker_id or 'unknown'}")
+        result = instruction_composite_validator.validate_instruction(
+            instruction_file=instruction_file,
+            instruction_content=instruction_content,
+            worker_id=worker_id
+        )
+
+        status = result.get("status")
+        score = result.get("score", 0)
+
+        # Log result
+        print(f"📊 Instruction validation: {status} (score: {score}/100)")
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print(f"❌ Instruction validation error: {e}")
+        traceback.print_exc()
+
+        return jsonify({
+            "error": f"Validation system error: {str(e)}",
+            "status": "ERROR"
+        }), 500
+
+
 @app.route('/', methods=['GET'])
 def index():
     """
@@ -1376,8 +1449,8 @@ def index():
     """
     return jsonify({
         "name": "Wingman Verification API",
-        "version": "6.1.0",
-        "phase": "6_output_validation",
+        "version": "6.3.0",
+        "phase": "6_instruction_validation",
         "endpoints": {
             "POST /check": "Validate instruction (Phase 2)",
             "POST /log_claim": "Record worker claim (Phase 3)",
@@ -1391,6 +1464,7 @@ def index():
             "GET /watcher/alerts": "Get alert history (Phase 4 Enhanced)",
             "POST /watcher/release/<worker_id>": "Release quarantined worker (Phase 4 Enhanced)",
             "POST /output_validation/validate": "Validate AI worker output (Phase 6.1)",
+            "POST /instruction_validation/validate": "Validate instruction documents (Phase 6.3)",
             "GET /health": "Check API status",
             "GET /stats": "Get verification statistics"
         },
