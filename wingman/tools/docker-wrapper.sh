@@ -41,7 +41,7 @@ FIRST_ARG_LOWER=$(echo "$FIRST_ARG" | tr '[:upper:]' '[:lower:]')
 
 for destructive_cmd in "${DESTRUCTIVE_COMMANDS[@]}"; do
     # Check if first argument matches destructive command
-    if [[ "$FIRST_ARG_LOWER" == "$destructive_cmd" ]] || [[ "$CMD_LOWER" == *"$destructive_cmd"* ]]; then
+    if [[ "$FIRST_ARG_LOWER" == "$destructive_cmd" ]] || [[ " $CMD_LOWER " == *" $destructive_cmd "* ]]; then
         echo "❌ BLOCKED: Destructive docker command requires Wingman approval" >&2
         echo "" >&2
         echo "   Command: docker $*" >&2
@@ -63,7 +63,8 @@ if [[ -n "${DOCKER_BIN:-}" ]]; then
     exec "$DOCKER_BIN" "$@"
 fi
 # Fallback: common locations (no PATH search - would find this wrapper)
-for candidate in /usr/local/bin/docker /opt/homebrew/bin/docker "${HOME}/.orbstack/bin/docker" /usr/bin/docker; do
+# Docker Desktop first, then other locations
+for candidate in /usr/local/bin/docker /Applications/Docker.app/Contents/Resources/bin/docker /opt/homebrew/bin/docker /usr/bin/docker; do
     if [[ -x "$candidate" ]]; then
         exec "$candidate" "$@"
     fi
